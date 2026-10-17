@@ -39,9 +39,12 @@ createServer(async (req, res) => {
         console.log(`saved model/${name}`);
         return send(200, "saved");
       }
+      // streams.yaml is optional: answer "nothing there" without an error in the browser console
+      if (name === "streams.yaml") { try { return send(200, await readFile(file), types[".yaml"]); } catch (e) { if (e.code === "ENOENT") return send(204, ""); throw e; } }
       return send(200, await readFile(file), types[extname(name)]);
     }
     if (path === "/" || path === "/index.html") return send(200, await readFile(join(viewerDir, "index.html")), types[".html"]);
+    if (path === "/streams.js") return send(200, await readFile(join(viewerDir, "streams.js")), types[".js"]);
     if (path.startsWith("/vendor/") && !path.includes("..")) return send(200, await readFile(join(viewerDir, path)), types[extname(path)] || "application/octet-stream");
     send(404, "Not found");
   } catch (e) {

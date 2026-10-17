@@ -10,7 +10,9 @@ burrowly/               <- this repository
   model/                 <- your architecture, one YAML file per diagram level
     system.yaml          <- top level (start here)
     robot-cell.yaml      <- drill-down of a block (any block can have one)
+    streams.yaml         <- optional: data streams that run through several blocks and levels
   viewer/index.html      <- the viewer/editor (plain HTML, no build step)
+  viewer/streams.js      <- data stream logic, shared by the viewer and tools/check.mjs
   tools/serve.mjs        <- local server: view + edit + save back to model/
   tools/build.mjs        <- bundle everything into one shareable HTML file
   tools/check.mjs        <- run the model checks from the command line (CI, Copilot)
@@ -71,8 +73,14 @@ node tools/serve.mjs          # open http://localhost:4321
 
   The PDF export uses the browser's print dialog, so pick **Save as PDF** as the printer. Plain Ctrl+P / Cmd+P prints
   the current level the same way. Exports are always light-themed and show no selection or edit handles.
-- **Checks** lists problems across all files: unknown ids, missing files, and connections that
-  exist one level up but are not drawn in the drill-down.
+- **Streams** lists the data streams in `model/streams.yaml`: data that travels through several
+  blocks, possibly across levels (for example camera images going through a PLC to an analysis
+  application). Click one to light up its route on the diagram, with numbered steps and the flow
+  direction, on every level you open. It also shows each step's connection details and duration,
+  and the total. The details of a block or line list the streams that pass through it. See
+  "Data streams" in the [YAML guide](docs/YAML-GUIDE.md#11-data-streams).
+- **Checks** lists problems across all files: unknown ids, missing files, connections that
+  exist one level up but are not drawn in the drill-down, and data streams whose route is broken.
 - The interface table under the diagram shows which connections still miss
   `type / protocol / data_format / timing / owner` (configurable with
   `required_connection_fields` in `system.yaml`).

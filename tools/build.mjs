@@ -28,6 +28,8 @@ for (const [name, text] of Object.entries(files)) {
 if (bad) process.exit(1);
 
 let html = await readFile(join(root, "viewer", "index.html"), "utf8");
+const streamsJs = await readFile(join(root, "viewer", "streams.js"), "utf8");
+html = html.replace('<script src="streams.js"></script>', () => `<script>\n${streamsJs.replace(/<\/script/gi, "<\\/script")}</script>`);
 const bundle = JSON.stringify(files).replace(/</g, "\\u003c");
 html = html.replace('<script src="vendor/js-yaml.min.js"></script>',
   '<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>\n' +

@@ -131,6 +131,21 @@ body.cv-max .side > .panel { flex: 0 1 auto; min-height: 0; overflow: auto; }
 .conn:hover .edge, .conn.sel .edge { stroke-width: 3.5; }
 .elabel { font: 500 12px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
 .dim { opacity: .22; }
+.flow { fill: none; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 2 12; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) { .flow { animation: flow .9s linear infinite; } .flow.rev { animation-direction: reverse; } }
+@keyframes flow { to { stroke-dashoffset: -14; } }
+.hl-ring { fill: none; stroke-width: 2.5; pointer-events: none; }
+.steps { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.steps td { padding: 5px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.steps td.n { color: var(--muted); width: 1.5em; }
+.steps td.dur { text-align: right; white-space: nowrap; font-family: var(--font-mono); }
+.steps tr.hop td { color: var(--muted); font-size: 11.5px; border-bottom: 0; padding-top: 0; }
+.steps tr.total td { font-weight: 600; border-bottom: 0; }
+.steps button { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-align: left; }
+.stream-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 8px; }
+.stream-card.open { border-color: var(--accent); }
+.stream-card > button.head { display: flex; gap: 8px; align-items: center; justify-content: space-between; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.stream-card .tot { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
 svg .ext-note { font: 400 11px var(--font-ui); fill: var(--muted); }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 16px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
@@ -201,7 +216,7 @@ dl.attrs dd { margin: 0; font-family: var(--font-mono); font-size: 12.5px; min-w
 .editor { display: grid; gap: 10px; padding: 12px 16px 16px; }
 .editor textarea { width: 100%; min-height: 380px; resize: vertical; font: 12.5px/1.55 var(--font-mono); background: var(--surface-2);
   border: 1px solid var(--line); border-radius: 6px; padding: 10px; tab-size: 2; white-space: pre; overflow: auto; }
-.editor .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.editor .row, .insp .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .editor fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px 10px; margin: 0; display: grid; gap: 6px; }
 .editor legend { font-size: 12px; color: var(--muted); padding: 0 4px; font-weight: 600; }
 .editor input, .editor select { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; padding: 4px 7px; font-size: 13px; min-width: 0; flex: 1 1 110px; }
@@ -359,6 +374,7 @@ body.ym-open .side { display: none; }
         <button role="tab" id="tab-details" aria-selected="true" type="button">Details</button>
         <button role="tab" id="tab-yaml" aria-selected="false" type="button">YAML</button>
         <button role="tab" id="tab-types" aria-selected="false" type="button" hidden>Types</button>
+        <button role="tab" id="tab-streams" aria-selected="false" type="button">Streams</button>
         <button role="tab" id="tab-issues" aria-selected="false" type="button">Checks</button>
         <button class="side-toggle" type="button" data-side="toggle" title="Collapse the details panel (D)" aria-label="Collapse the details panel">⇥</button>
       </div>
@@ -386,6 +402,7 @@ body.ym-open .side { display: none; }
 </div>
 
 <script src="vendor/js-yaml.min.js"></script>
+<script src="streams.js"></script>
 <script>
 "use strict";
 /* ------------------------------------------------------------------ constants */
@@ -394,6 +411,8 @@ const NAMED = ["blue","green","purple","gray","orange","amber","teal","red","pin
 const CORE_CONN_FIELDS = ["type","protocol","data_format","timing","owner"];
 const CONN_HIDDEN = new Set(["id","from","to","direction","label","route","links","notes","realizes"]);
 const BLOCK_HIDDEN = new Set(["id","name","subtitle","kind","at","detail","links","description"]);
+const STREAMS = BurrowlyStreams.FILE;   // model/streams.yaml: data streams across the levels
+const STREAM_HIDDEN = new Set(["id","name","description","path","derived_from","links"]);
 
 /* ------------------------------------------------------------------ state */
 const S = {
@@ -401,6 +420,7 @@ const S = {
   root: "system.yaml",
   current: "system.yaml",
   sel: null,            // { t: "block"|"conn", id }
+  stream: null,         // id of the stream highlighted in the Streams tab
   tab: "details",
   editing: false,
   canSave: false,
@@ -442,10 +462,11 @@ function normalize(d) {
   return d;
 }
 function parseFile(name) {
-  const f = S.files[name];
-  try { f.data = normalize(jsyaml.load(f.text)); f.error = null; }
-  catch (e) { f.error = e.message.split("\n")[0]; f.errLine = e.mark?.line; if (!f.data) f.data = normalize({}); }
+  const f = S.files[name], norm = name === STREAMS ? BurrowlyStreams.normalizeStreams : normalize;
+  try { f.data = norm(jsyaml.load(f.text)); f.error = null; }
+  catch (e) { f.error = e.message.split("\n")[0]; f.errLine = e.mark?.line; if (!f.data) f.data = norm({}); }
 }
+const isLevel = (name) => name !== STREAMS;
 
 /* ------------------------------------------------------------------ model queries */
 function parentMap() {
@@ -500,7 +521,7 @@ function checks() {
   const out = []; const pm = parentMap();
   const add = (sev, file, msg, sel) => out.push({ sev, file, msg, sel });
   for (const [name, f] of Object.entries(S.files)) {
-    if (f.missing) continue;
+    if (f.missing || !isLevel(name)) continue;
     if (f.error) { add("err", name, "YAML error: " + f.error); continue; }
     const d = f.data, { kinds, types } = kindsFor(name);
     const ids = new Map();
@@ -550,7 +571,24 @@ function checks() {
       }
     }
   }
+  if (S.files[STREAMS] && parentMap()[STREAMS]) add("err", parentMap()[STREAMS].file, `"${STREAMS}" is reserved for data streams; give the drill-down of "${parentMap()[STREAMS].block}" another file name`);
+  S._streams = BurrowlyStreams.analyze(S.files, S.root);
+  for (const i of S._streams.issues) out.push({ ...i, sel: i.stream ? { t: "stream", id: i.stream } : undefined });
   return out;
+}
+/* ------------------------------------------------------------------ data streams */
+const streamsOf = () => S._streams || (S._streams = BurrowlyStreams.analyze(S.files, S.root));
+const blockPath = (file, id) => streamsOf().canon?.(file, id) || null;
+const within = (inner, outer) => inner === outer || inner.startsWith(outer + "/");
+// streams that pass a block (or something inside it), and streams that ride a connection
+const streamsThroughBlock = (p) => p ? streamsOf().streams.filter(st => st.steps.some(x => x.path && within(x.path, p))) : [];
+const streamsOnConn = (file, c, i) => (streamsOf().carries.get(file + "#" + (c.id || "#" + (i + 1))) || []).map(id => streamsOf().streams.find(s => s.id === id)).filter(Boolean);
+const streamBtns = (list) => `<ul class="list">${list.map(st => `<li><button type="button" data-stream="${esc(st.id)}"><i class="tdot" style="background:${streamColor(st.id)}"></i>${esc(st.name)}${st.ok ? "" : ` <span class="chip err">error</span>`}</button></li>`).join("")}</ul>`;
+const STREAM_COLORS = ["#2457d6", "#c2410c", "#0f766e", "#9333ea", "#b45309", "#be185d", "#4d7c0f", "#0369a1"];
+function streamColor(id) {
+  const raw = streamsOf().streams.find(s => s.id === id)?.raw?.color;
+  if (raw) return paint(raw).stroke;
+  const i = streamsOf().streams.findIndex(s => s.id === id); return STREAM_COLORS[(i < 0 ? 0 : i) % STREAM_COLORS.length];
 }
 
 /* ------------------------------------------------------------------ edge routing */
@@ -879,7 +917,20 @@ function renderDiagram() {
   const selConnIds = new Set(), selBlockIds = new Set();
   if (S.sel?.t === "block") { selBlockIds.add(S.sel.id); d.connections.forEach(c => { if (c.from === S.sel.id || c.to === S.sel.id) { selConnIds.add(c.id); selBlockIds.add(c.from); selBlockIds.add(c.to); } }); }
   if (S.sel?.t === "conn") { const c = d.connections.find(x => x.id === S.sel.id); if (c) { selConnIds.add(c.id); selBlockIds.add(c.from); selBlockIds.add(c.to); } }
-  const dimming = !!S.sel;
+  // Streams tab: highlight the chosen stream's blocks and connections on this level
+  const hl = S.tab === "streams" && !S._exporting ? streamsOf().streams.find(x => x.id === S.stream) : null;
+  const hlBlocks = new Map(), hlConns = new Map();
+  if (hl) {
+    const flow = streamsOf().flow;
+    for (const n of nodes) {
+      const p = blockPath(file, n.id); if (!p) continue;
+      const nums = hl.steps.filter(x => x.path && within(x.path, p)).map(x => x.i + 1);
+      if (nums.length) hlBlocks.set(n.id, nums.length > 1 ? `${nums[0]}–${nums[nums.length - 1]}` : String(nums[0]));
+    }
+    d.connections.forEach((c, i) => { const fw = flow.get(file + "#" + (c.id || "#" + (i + 1)))?.get(hl.id); if (fw !== undefined) hlConns.set(i, fw); });
+  }
+  const dimming = !!S.sel || !!hl;
+  if (hl) { selConnIds.clear(); selBlockIds.clear(); }
 
   const usedTypes = [...new Set(d.connections.map(c => c.type || "_none"))];
   let defs = "<defs>";
@@ -908,11 +959,13 @@ function renderDiagram() {
     const ms = (dir === "both" || dir === "backward") ? `marker-start="${mk}"` : "";
     const me = (dir === "both" || dir === "forward") ? `marker-end="${mk}"` : "";
     const cid = c.id || `#${i + 1}`;
-    const cls = ["conn", selConnIds.has(c.id) && S.sel?.t === "conn" ? "sel" : "", dimming && !selConnIds.has(c.id) ? "dim" : ""].join(" ");
+    const lit = hl ? hlConns.has(i) : selConnIds.has(c.id);
+    const cls = ["conn", !hl && selConnIds.has(c.id) && S.sel?.t === "conn" ? "sel" : "", dimming && !lit ? "dim" : ""].join(" ");
     const label = c.label !== undefined ? c.label : (c.protocol || "");
-    edges += `<g class="${cls}" data-conn="${esc(cid)}"><path class="edge" d="${r.d}" style="stroke:${p.stroke}" ${t.dashed ? 'stroke-dasharray="6 5"' : ""} ${ms} ${me}/><path class="edge-hit" d="${r.d}"/><title>${esc((A.name || A.id) + " ↔ " + (B.name || B.id))}</title></g>`;
+    const flowLine = hl && hlConns.has(i) ? `<path class="flow${hlConns.get(i) ? "" : " rev"}" d="${r.d}" style="stroke:${streamColor(hl.id)}"/>` : "";
+    edges += `<g class="${cls}" data-conn="${esc(cid)}"><path class="edge" d="${r.d}" style="stroke:${p.stroke}" ${t.dashed ? 'stroke-dasharray="6 5"' : ""} ${ms} ${me}/>${flowLine}<path class="edge-hit" d="${r.d}"/><title>${esc((A.name || A.id) + " ↔ " + (B.name || B.id))}</title></g>`;
     if (label) r.lab[1] = placeLabel(r.lab[0], r.lab[1], label, r.anchor);
-    if (label) labels += `<text class="elabel ${dimming && !selConnIds.has(c.id) ? "dim" : ""}" x="${r.lab[0]}" y="${r.lab[1]}" text-anchor="${r.anchor}" style="fill:${p.stroke}">${esc(label)}</text>`;
+    if (label) labels += `<text class="elabel ${dimming && !lit ? "dim" : ""}" x="${r.lab[0]}" y="${r.lab[1]}" text-anchor="${r.anchor}" style="fill:${p.stroke}">${esc(label)}</text>`;
   });
 
   for (const j of routed.junctions || []) edges += `<circle class="junction${dimming ? " dim" : ""}" cx="${j.x}" cy="${j.y}" r="4" style="fill:${paint(types[j.type]?.color || "slate").stroke}"/>`;
@@ -920,7 +973,7 @@ function renderDiagram() {
   let blocks = "";
   for (const n of nodes) {
     const g = geom(n), k = kinds[n.kind] || {}, p = n.ext ? { fill: "var(--surface-2)", stroke: "var(--gray-stroke)" } : paint(k.color);
-    const cls = ["block", S.sel?.t === "block" && S.sel.id === n.id ? "sel" : "", dimming && !selBlockIds.has(n.id) ? "dim" : ""].join(" ");
+    const cls = ["block", S.sel?.t === "block" && S.sel.id === n.id ? "sel" : "", dimming && !(hl ? hlBlocks.has(n.id) : selBlockIds.has(n.id)) ? "dim" : ""].join(" ");
     let s = `<g class="${cls}" data-block="${esc(n.id)}" transform="translate(0,0)">`;
     if (n.detail) s += `<rect x="${g.x + 5}" y="${g.y + 5}" width="${g.w}" height="${g.h}" rx="9" style="fill:${p.fill};stroke:${p.stroke}" stroke-width="1.5" opacity=".7"/>`;
     s += `<rect class="box" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="9" style="fill:${p.fill};stroke:${p.stroke}" stroke-width="1.75" ${n.ext ? 'stroke-dasharray="5 4"' : ""}/>`;
@@ -930,6 +983,12 @@ function renderDiagram() {
     if (k.badge && !n.ext) {
       const bw = Math.max(24, String(k.badge).length * 8 + 12);
       s += `<rect x="${g.x + g.w - bw / 2 - 2}" y="${g.y - 12}" width="${bw}" height="24" rx="12" style="fill:${p.stroke}"/><text class="badge-t" x="${g.x + g.w - 2}" y="${g.y + 4}" text-anchor="middle">${esc(k.badge)}</text>`;
+    }
+    if (hlBlocks.has(n.id)) {
+      const num = hlBlocks.get(n.id), bw = Math.max(22, num.length * 8 + 10), inside = n.detail && hl.steps.some(x => x.path && x.path.startsWith(blockPath(file, n.id) + "/"));
+      s += `<rect class="hl-ring" x="${g.x - 4}" y="${g.y - 4}" width="${g.w + 8}" height="${g.h + 8}" rx="12" style="stroke:${streamColor(hl.id)}"/>`;
+      s += `<rect x="${g.x - bw / 2 + 2}" y="${g.y - 11}" width="${bw}" height="22" rx="11" style="fill:${streamColor(hl.id)}"/><text class="badge-t" x="${g.x + 2}" y="${g.y + 4}" text-anchor="middle">${esc(num)}</text>`;
+      if (inside) s += `<text class="open-t" x="${g.x + g.w - 8}" y="${g.y + g.h - 8}" text-anchor="end">continues inside</text>`;
     }
     if (n.detail) s += `<g class="open" data-open="${esc(n.detail)}"><rect x="${g.x + 6}" y="${g.y + g.h - 19}" width="44" height="15" rx="4" fill="transparent"/><text class="open-t" x="${g.x + 10}" y="${g.y + g.h - 8}">open ▸</text><title>Open ${esc(n.name || n.id)}</title></g>`;
     if (S.editing) s += `<g class="handle${S.sel?.t === "block" && S.sel.id === n.id ? " show" : ""}" data-handle="${esc(n.id)}"><circle cx="${g.x + g.w}" cy="${g.cy}" r="9"/><text x="${g.x + g.w}" y="${g.cy + 4}" text-anchor="middle">+</text><title>Drag to another block to connect</title></g>`;
@@ -999,6 +1058,8 @@ function renderDetails() {
     if (b.ext && b.from) h += `<p class="hint">Defined in ${esc(b.from)}. <button class="btn" type="button" data-go="${esc(b.from)}">Go there</button></p>`;
     if (b.detail) h += `<div><button class="btn primary" type="button" data-go="${esc(b.detail)}">Open ${esc(b.name || b.id)} ▸</button></div>`;
     else if (!b.ext && S.editing) h += `<div><button class="btn" type="button" data-act="add-detail" data-id="${esc(b.id)}">Add subsystems to this block</button></div>`;
+    const through = streamsThroughBlock(blockPath(file, b.id));
+    if (through.length) h += `<div><div class="kicker">Data streams through here (${through.length})</div>${streamBtns(through)}</div>`;
     if (conns.length) h += `<div><div class="kicker">Connections (${conns.length})</div><ul class="list">${conns.map(c => `<li><button type="button" data-conn="${esc(c.id)}">${esc(nm(c.from))} ${c.direction === "both" ? "↔" : "→"} ${esc(nm(c.to))} <span class="hint">${esc(c.protocol || c.type || "")}</span></button></li>`).join("")}</ul></div>`;
     h += linksHtml(b.links);
   } else if (S.sel?.t === "conn" && d.connections.find(c => c.id === S.sel.id)) {
@@ -1011,6 +1072,8 @@ function renderDetails() {
       h += `<p class="hint">Implements <code>${esc(c.realizes)}</code> one level up${pf ? ` (${esc(pf)})` : ""}.</p>`;
     }
     if (c.notes) h += `<p>${esc(c.notes)}</p>`;
+    const carried = streamsOnConn(file, c, d.connections.indexOf(c));
+    if (carried.length) h += `<div><div class="kicker">Carries (${carried.length})</div>${streamBtns(carried)}</div>`;
     h += linksHtml(c.links);
   } else {
     const all = d.connections.length, done = d.connections.filter(c => !missingFields(c).length).length;
@@ -1025,9 +1088,53 @@ function renderDetails() {
   el.innerHTML = `<div class="insp">${h}</div>`;
 }
 function renderIssues(list) {
-  $("tabpanel").innerHTML = `<div class="insp"><p class="hint">Checks run over every file: unknown ids, missing files, and connections that exist one level up but are not drawn inside.</p>` +
-    (list.length ? `<div>${list.map(i => `<div class="issue"><span class="chip ${i.sev}">${i.sev === "err" ? "error" : "check"}</span><div><div>${esc(i.msg)}</div><button class="where btn" type="button" data-go="${esc(i.file)}" ${i.sel ? `data-sel-t="${i.sel.t}" data-sel-id="${esc(i.sel.id)}"` : ""}>${esc(i.file)}</button></div></div>`).join("")}</div>`
+  $("tabpanel").innerHTML = `<div class="insp"><p class="hint">Checks run over every file: unknown ids, missing files, connections that exist one level up but are not drawn inside, and data streams that lost their route.</p>` +
+    (list.length ? `<div>${list.map(i => `<div class="issue"><span class="chip ${i.sev}">${i.sev === "err" ? "error" : "check"}</span><div><div>${esc(i.msg)}</div>${i.file === STREAMS ? `<button class="where btn" type="button" ${i.stream ? `data-stream="${esc(i.stream)}"` : `data-act="streams-yaml"`}>${esc(i.file)}</button>` : `<button class="where btn" type="button" data-go="${esc(i.file)}" ${i.sel ? `data-sel-t="${i.sel.t}" data-sel-id="${esc(i.sel.id)}"` : ""}>${esc(i.file)}</button>`}</div></div>`).join("")}</div>`
       : `<p><span class="chip ok">✓ No problems found</span></p>`) + `</div>`;
+}
+function renderStreams(issueList) {
+  const R = streamsOf(), sf = S.files[STREAMS], el = $("tabpanel");
+  let h = `<p class="hint">A data stream is data travelling through several blocks, possibly across levels. They are listed in <code>model/${STREAMS}</code>. Click one to see it on the diagram.</p>`;
+  if (!sf || sf.missing) {
+    h += `<p class="hint">This model has no streams yet.</p><div><button class="btn primary" type="button" data-act="new-stream">Add a stream</button></div>`;
+    el.innerHTML = `<div class="insp">${h}</div>`; return;
+  }
+  const errs = (id) => (issueList || []).filter(i => i.file === STREAMS && i.stream === id);
+  const fileErr = sf.error ? `<div class="issue"><span class="chip err">error</span><div>YAML error: ${esc(sf.error)}</div></div>` : "";
+  const total = (st) => st.steps.length - st.unknown ? BurrowlyStreams.fmtDuration(st.totalMs) + (st.unknown ? " +?" : "") : "";
+  h += fileErr + R.streams.map(st => {
+    const open = S.stream === st.id, list = errs(st.id), nerr = list.filter(i => i.sev === "err").length;
+    const chip = nerr ? `<span class="chip err">${nerr} error${nerr > 1 ? "s" : ""}</span>` : list.length ? `<span class="chip warn">${list.length} check${list.length > 1 ? "s" : ""}</span>` : `<span class="chip ok">✓</span>`;
+    let c = `<div class="stream-card${open ? " open" : ""}"><button class="head" type="button" data-stream="${esc(st.id)}" aria-expanded="${open}"><span><i class="tdot" style="background:${streamColor(st.id)}"></i><strong>${esc(st.name)}</strong></span><span class="tot">${esc(total(st))} ${chip}</span></button>`;
+    if (open) {
+      const r = st.raw, df = [].concat(r.derived_from ?? []).map(String);
+      const feeds = R.streams.filter(x => [].concat(x.raw.derived_from ?? []).map(String).includes(st.id));
+      if (r.description) c += `<p>${esc(r.description)}</p>`;
+      c += attrsHtml({ id: st.id, ...r }, STREAM_HIDDEN);
+      c += `<table class="steps"><tbody>`;
+      for (const x of st.steps) {
+        if (x.i > 0) {
+          // the most detailed connection that says something about protocol, format or timing
+          const info = (c) => [c.protocol, c.data_format, c.timing].filter(v => !isEmpty(v)).map(fmtVal).join(" · ");
+          const g = x.hop?.carried?.find(k => info(k.c)) || x.hop?.best?.[0], cc = g?.c;
+          const hopTxt = cc ? info(cc) || "connection details not set" : "no route";
+          c += `<tr class="hop"><td></td><td colspan="2">↓ ${cc ? `<button type="button" data-go="${esc(g.file)}" data-sel-t="conn" data-sel-id="${esc(cc.id || "")}">${esc(hopTxt)}</button>` : `<span class="missing">${esc(hopTxt)}</span>`}</td></tr>`;
+        }
+        const where = x.file ? x.file : "", lvl = where ? (S.files[where]?.data?.title || fileLabel(where)) : "";
+        c += `<tr><td class="n">${x.i + 1}</td><td>${x.ok ? `<button type="button" data-go="${esc(where)}">${esc(x.name)}</button><div class="hint">${esc(lvl)}</div>` : `<span class="missing">${esc(x.ref || "?")}</span>`}${x.entry.note ? `<div class="hint">${esc(x.entry.note)}</div>` : ""}</td>` +
+          `<td class="dur">${x.ms !== null ? esc(BurrowlyStreams.fmtDuration(x.ms)) : isEmpty(x.duration) ? `<span class="missing">–</span>` : `<span class="missing">${esc(x.duration)}</span>`}</td></tr>`;
+      }
+      c += `<tr class="total"><td></td><td>Total${st.unknown ? `<div class="hint">${st.unknown} of ${st.steps.length} steps have no duration</div>` : ""}</td><td class="dur">${st.steps.length - st.unknown ? esc(BurrowlyStreams.fmtDuration(st.totalMs)) : "–"}</td></tr></tbody></table>`;
+      if (df.length) c += `<div><div class="kicker">Made from</div>${streamBtns(df.map(id => R.streams.find(x => x.id === id)).filter(Boolean))}</div>`;
+      if (feeds.length) c += `<div><div class="kicker">Used to make</div>${streamBtns(feeds)}</div>`;
+      if (list.length) c += `<div>${list.map(i => `<div class="issue"><span class="chip ${i.sev}">${i.sev === "err" ? "error" : "check"}</span><div>${esc(i.msg.replace(/^Stream "[^"]*": /, ""))}</div></div>`).join("")}</div>`;
+      c += linksHtml(r.links);
+    }
+    return c + `</div>`;
+  }).join("");
+  if (!R.streams.length && !sf.error) h += `<p class="hint">No streams in ${STREAMS} yet.</p>`;
+  h += `<div class="row"><button class="btn" type="button" data-act="new-stream">Add a stream</button><button class="btn" type="button" data-act="streams-yaml">Edit ${STREAMS}</button></div>`;
+  el.innerHTML = `<div class="insp">${h}</div>`;
 }
 function renderEditor() {
   const file = S.current, f = S.files[file], el = $("tabpanel");
@@ -1043,8 +1150,8 @@ function renderEditor() {
 function renderSide(issueList) {
   if (S.tab === "types" && !S.editing) S.tab = "details";
   $("tab-types").hidden = !S.editing;
-  for (const t of ["details", "types", "yaml", "issues"]) $("tab-" + t).setAttribute("aria-selected", String(S.tab === t));
-  if (S.tab === "types") renderTypes(); else if (S.tab === "yaml") renderEditor(); else if (S.tab === "issues") renderIssues(issueList); else if (S.editing) renderForm(); else renderDetails();
+  for (const t of ["details", "types", "yaml", "streams", "issues"]) $("tab-" + t).setAttribute("aria-selected", String(S.tab === t));
+  if (S.tab === "types") renderTypes(); else if (S.tab === "yaml") renderEditor(); else if (S.tab === "issues") renderIssues(issueList); else if (S.tab === "streams") renderStreams(issueList); else if (S.editing) renderForm(); else renderDetails();
 }
 function renderCrumbs() {
   const chain = [S.current, ...ancestors(S.current)].reverse();
@@ -1072,21 +1179,23 @@ function renderTopbar() {
   return list;
 }
 /* ---- large YAML editor ---- */
-function ymOpen() {
-  const f = S.files[S.current]; if (f.missing) return;
+const ymFile = () => S.ymFile && S.files[S.ymFile] ? S.ymFile : S.current;
+function ymOpen(file) {
+  S.ymFile = file || null;
+  const f = S.files[ymFile()]; if (f.missing) return;
   const m = $("ymodal"), ta = $("yaml-big");
   try { m.style.setProperty("--ym-size", (localStorage.getItem("arch.ymSize") || 14) + "px"); if (localStorage.getItem("arch.ymWrap") === "1") m.classList.add("wrap"); } catch {}
   m.querySelector('[data-act="ym-wrap"]').setAttribute("aria-pressed", String(m.classList.contains("wrap")));
   m.hidden = false; document.body.classList.add("ym-open");
   ta.value = f.text; ymSync(); ymGutter(); ymStatus(); ta.focus(); ta.setSelectionRange(0, 0); ta.scrollTop = 0;
 }
-function ymClose() { $("ymodal").hidden = true; document.body.classList.remove("ym-open"); render(); }
+function ymClose() { S.ymFile = null; $("ymodal").hidden = true; document.body.classList.remove("ym-open"); render(); }
 function ymSync() {
   const m = $("ymodal"); if (m.hidden) return;
-  const f = S.files[S.current], ta = $("yaml-big");
+  const f = S.files[ymFile()], ta = $("yaml-big");
   if (f.missing) { ymClose(); return; }
-  $("ym-title").textContent = f.data?.title || fileLabel(S.current);
-  $("ym-file").textContent = "model/" + S.current;
+  $("ym-title").textContent = ymFile() === STREAMS ? "Data streams" : f.data?.title || fileLabel(ymFile());
+  $("ym-file").textContent = "model/" + ymFile();
   $("ym-copy").hidden = S.canSave;
   if (document.activeElement !== ta && ta.value !== f.text) { ta.value = f.text; ymGutter(); }
   ymStatus();
@@ -1097,13 +1206,13 @@ function ymGutter() {
   g.scrollTop = ta.scrollTop;
 }
 function ymStatus() {
-  const f = S.files[S.current], st = $("ym-status"); if (!st || $("ymodal").hidden) return;
+  const f = S.files[ymFile()], st = $("ym-status"); if (!st || $("ymodal").hidden) return;
   st.className = "status-line" + (f.error ? " err" : "");
   st.textContent = f.error ? (f.errLine != null ? `Line ${f.errLine + 1}: ` : "") + f.error.replace(/\s*\(\d+:\d+\)\s*$/, "") : (S.canSave ? "Valid YAML · saves automatically" : "Valid YAML · preview only, use Copy to keep changes");
   $("ym-goto").hidden = !(f.error && f.errLine != null);
 }
 function ymGoto() {
-  const f = S.files[S.current], ta = $("yaml-big"); if (f.errLine == null) return;
+  const f = S.files[ymFile()], ta = $("yaml-big"); if (f.errLine == null) return;
   const lines = ta.value.split("\n"); let pos = 0; for (let i = 0; i < f.errLine && i < lines.length; i++) pos += lines[i].length + 1;
   ta.focus(); ta.setSelectionRange(pos, pos + (lines[f.errLine]?.length || 0));
   const lh = parseFloat(getComputedStyle(ta).lineHeight) || 22; ta.scrollTop = Math.max(0, f.errLine * lh - ta.clientHeight / 3); ymGutter();
@@ -1135,7 +1244,7 @@ function levelOrder() {
   const walk = (f) => { if (seen.has(f) || !S.files[f] || S.files[f].missing || S.files[f].error) return; seen.add(f); out.push(f);
     for (const b of S.files[f].data?.blocks || []) if (b.detail) walk(b.detail); };
   walk(S.root);
-  for (const f of Object.keys(S.files)) walk(f);
+  for (const f of Object.keys(S.files)) if (isLevel(f)) walk(f);
   return out;
 }
 function withCleanView(file, fn) {
@@ -1217,7 +1326,7 @@ document.addEventListener("click", (e) => {
   const k = it.dataset.export;
   if (k === "pdf-all") printLevels(levelOrder());
   else if (k === "pdf") printLevels([S.current]);
-  else if (k === "yaml") download(S.current, new Blob([S.files[S.current].text], { type: "application/x-yaml" }));
+  else if (k === "yaml") { const yf = $("ymodal").hidden ? S.current : ymFile(); download(yf, new Blob([S.files[yf].text], { type: "application/x-yaml" })); }
   else if (k === "yaml-all") download(fileLabel(S.root) + "-model.zip", zipStore(Object.keys(S.files).filter(f => !S.files[f].missing).map(f => ["model/" + f, S.files[f].text])));
   else exportImage(k);
 });
@@ -1611,6 +1720,7 @@ function flash(msg, err = false) { S.msg = msg; S.msgErr = err; if (!$("ymodal")
 
 /* ------------------------------------------------------------------ actions */
 function go(file, sel) {
+  if (file === STREAMS) { S.tab = "streams"; render(); return; }
   const t = S.files[file]?.data?.title; document.title = t ? `${t} · Burrowly` : "Burrowly";
   if (!S.files[file]) S.files[file] = { text: "", savedText: "", data: normalize({}), missing: true };
   S.current = file; S.sel = sel || null;
@@ -1640,6 +1750,39 @@ blocks:
 
 connections:
 `;
+const STREAMS_STARTER = `# Data streams: data that travels through several blocks, possibly across levels.
+# Each step names a block by its drill-down path: block ids from system.yaml down, joined by "/".
+# See docs/YAML-GUIDE.md, section "Data streams".
+streams:
+`;
+function newStream() {
+  if (!S.files[STREAMS] || S.files[STREAMS].missing) { S.files[STREAMS] = { text: STREAMS_STARTER, savedText: "", undo: [] }; parseFile(STREAMS); }
+  const file = S.current, d = S.files[file].data;
+  // start from a connection on this level so the new stream is valid straight away
+  let path;
+  for (const c of d.connections || []) {
+    const a = blockPath(file, c.from), b = blockPath(file, c.to); if (!a || !b) continue;
+    path = (c.direction === "backward" ? [b, a] : [a, b]).map(block => ({ block, duration: "" })); break;
+  }
+  const taken = new Set((S.files[STREAMS].data.streams || []).map(x => x.id));
+  let n = taken.size + 1; while (taken.has(`stream-${n}`)) n++;
+  const id = `stream-${n}`;
+  const obj = { id, name: "New stream", path: path ? path.map(p => ({ block: p.block })) : undefined };
+  mutate(t => addItem(t, "streams", obj), { file: STREAMS, full: true });
+  S.stream = id; S.tab = "streams"; render(); ymOpen(STREAMS);
+  const ta = $("yaml-big"), at = ta.value.indexOf(`id: ${id}`); if (at >= 0) { ta.setSelectionRange(at, at); const lh = parseFloat(getComputedStyle(ta).lineHeight) || 22; ta.scrollTop = Math.max(0, ta.value.slice(0, at).split("\n").length * lh - ta.clientHeight / 3); ymGutter(); }
+}
+// After a block id changes, point every stream step at the new id (also steps inside it).
+function renameInStreams(oldPath, newPath) {
+  const sf = S.files[STREAMS]; if (!sf || sf.missing || sf.error || !oldPath || oldPath === newPath) return;
+  const hit = sf.data.streams.filter(st => st.id && st.path.some(e => within(e.block, oldPath)));
+  if (!hit.length) return;
+  const ok = mutate(t => hit.reduce((acc, st) => setItemKey(acc, "streams", st.id, "path", st.path.map(e => {
+    const block = BurrowlyStreams.renamedPath(e.block, oldPath, newPath);
+    return Object.keys(e).length === 1 ? block : { ...e, block };
+  })), t), { file: STREAMS });
+  toast(ok ? `Updated ${hit.length} data stream${hit.length > 1 ? "s" : ""} in ${STREAMS} to the new id.` : `Rename "${oldPath}" to "${newPath}" in ${STREAMS} by hand; see the Checks tab.`, !ok);
+}
 function createChild(file) {
   const f = S.files[file], p = parentMap()[file], pb = p && S.files[p.file].data.blocks.find(b => b.id === p.block);
   f.text = pb ? childSkeleton(p.file, pb) : file === S.root ? STARTER : `title: ${fileLabel(file)}\n\nblocks:\n\nconnections:\n`;
@@ -1680,7 +1823,9 @@ function writeMapRow(row) {
     const { kinds, types } = kindsFor(S.current), taken = new Set(Object.keys(section === "kinds" ? kinds : types));
     key = slug(label); let i = 2; while (taken.has(key)) key = `${slug(label)}-${i++}`;
   }
-  const obj = { label: label || key };
+  // keep fields the form doesn't show (for example carries_data on a line type)
+  const prev = S.files[file]?.data?.[section]?.[key], obj = { ...(prev && typeof prev === "object" ? prev : {}), label: label || key };
+  delete obj.badge; delete obj.dashed;
   if (get("badge")?.value.trim()) obj.badge = get("badge").value.trim();
   obj.color = get("color").value;
   if (get("dashed")?.checked) obj.dashed = true;
@@ -1699,8 +1844,8 @@ document.addEventListener("change", (e) => {
     let v = el.value;
     if (el.dataset.arr || key === "required_connection_fields") v = v.split(",").map(x => x.trim()).filter(Boolean);
     if (scope === "block" && key === "name" && /^new-/.test(id) && String(v).trim()) {
-      const nid = uniqueId(slug(v), levelNodes(S.current).filter(n => n.id !== id));
-      if (mutate(t => renameBlock(setItemKey(t, "blocks", id, "name", v), id, nid))) { S.sel = { t: "block", id: nid }; form.dataset.id = nid; form.querySelectorAll("[data-id]").forEach(x => x.dataset.id = nid); const idl = form.querySelector(".idline"); if (idl) idl.textContent = idl.textContent.replace(id, nid); }
+      const nid = uniqueId(slug(v), levelNodes(S.current).filter(n => n.id !== id)), oldPath = blockPath(S.current, id);
+      if (mutate(t => renameBlock(setItemKey(t, "blocks", id, "name", v), id, nid))) { renameInStreams(oldPath, oldPath && oldPath.replace(/[^/]+$/, nid)); S.sel = { t: "block", id: nid }; form.dataset.id = nid; form.querySelectorAll("[data-id]").forEach(x => x.dataset.id = nid); const idl = form.querySelector(".idline"); if (idl) idl.textContent = idl.textContent.replace(id, nid); }
       return;
     }
     if (writeScoped(scope, id, key, v) && ["from", "to", "type", "kind", "realizes"].includes(key)) renderSide(checks());
@@ -1720,8 +1865,12 @@ document.addEventListener("change", (e) => {
 });
 
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-go],[data-act],[data-conn],[role=tab],#edit-btn,#issues-chip,#undo-btn,[data-open]");
+  const t = e.target.closest("[data-go],[data-act],[data-conn],[data-stream],[role=tab],#edit-btn,#issues-chip,#undo-btn,[data-open]");
   if (!t) return;
+  if (t.dataset.stream !== undefined && !t.closest("svg")) {
+    const id = t.dataset.stream, again = S.tab === "streams" && S.stream === id && t.classList.contains("head");
+    S.stream = again ? null : id; S.tab = "streams"; render(); return;
+  }
   if (t.id === "edit-btn") { S.editing = !S.editing; if (S.tab === "yaml" && !S.editing) S.tab = "details"; if (S.editing) S.tab = "details"; render(); return; }
   if (t.id === "undo-btn") { undo(); return; }
   if (t.id === "issues-chip") { S.tab = "issues"; render(); return; }
@@ -1731,7 +1880,8 @@ document.addEventListener("click", (e) => {
   if (t.dataset.conn && !t.closest("svg")) { select({ t: "conn", id: t.dataset.conn }); return; }
   const act = t.dataset.act, file = S.current, f = S.files[file], form = t.closest(".form[data-scope]");
   if (act === "copy-yaml") {
-    navigator.clipboard.writeText(f.text).then(() => flash(`Copied. Paste it into model/${file}.`), () => { const ta = $("ymodal").hidden ? $("yaml") : $("yaml-big"); ta.focus(); ta.select(); flash("Text selected; press Ctrl+C / Cmd+C to copy."); });
+    const yf = $("ymodal").hidden ? file : ymFile();
+    navigator.clipboard.writeText(S.files[yf].text).then(() => flash(`Copied. Paste it into model/${yf}.`), () => { const ta = $("ymodal").hidden ? $("yaml") : $("yaml-big"); ta.focus(); ta.select(); flash("Text selected; press Ctrl+C / Cmd+C to copy."); });
   }
   if (act === "create-child") { createChild(file); S.editing = true; S.tab = "details"; render(); scheduleSave(); }
   if (act === "add-detail") {
@@ -1751,6 +1901,8 @@ document.addEventListener("click", (e) => {
     if (orig) mutate(tx => setItemKey(tx, form.dataset.scope === "block" ? "blocks" : "connections", form.dataset.id, orig, undefined));
   }
   if (act === "open-types") { S.tab = "types"; render(); }
+  if (act === "streams-yaml") ymOpen(STREAMS);
+  if (act === "new-stream") newStream();
   if (act === "add-kind" || act === "add-type") {
     const sec = act === "add-kind" ? "kinds" : "connection_types", list = document.querySelector(`[data-typelist="${sec}"]`);
     list.insertAdjacentHTML("beforeend", act === "add-kind" ? kindRow("", { color: "teal" }) : typeRow("", { color: "slate" }));
@@ -1767,14 +1919,15 @@ document.addEventListener("click", (e) => {
     if (n && !t.classList.contains("armed")) { t.classList.add("armed"); t.title = `Used ${n}×. Click again to remove.`; t.textContent = `used ${n}× · remove?`; t.style.fontSize = "11px"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = "×"; t.style.fontSize = ""; } }, 3000); return; }
     // clear the type from every block or line that uses it, then remove it
     for (const [name, f2] of Object.entries(S.files)) {
-      if (f2.missing) continue;
+      if (f2.missing || !isLevel(name)) continue;
       const items = sec === "kinds" ? f2.data.blocks.filter(b => b.kind === key) : f2.data.connections.filter(c => c.type === key && c.id);
       if (items.length) mutate(tx => items.reduce((acc, it) => setItemKey(acc, sec === "kinds" ? "blocks" : "connections", it.id, sec === "kinds" ? "kind" : "type", undefined), tx), { file: name });
     }
     mutate(tx => setMapEntry(tx, sec, key, null), { file: row.dataset.file, full: true });
   }
   if (act === "delete") {
-    if (!t.classList.contains("armed")) { t.classList.add("armed"); t.dataset.txt = t.textContent; t.textContent = "Click again to delete"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = t.dataset.txt; } }, 3000); return; }
+    const used = t.dataset.what === "block" ? streamsThroughBlock(blockPath(file, t.dataset.id)).length : t.dataset.what === "conn" ? streamsOnConn(file, f.data.connections.find(c => c.id === t.dataset.id) || {}, -1).length : 0;
+    if (!t.classList.contains("armed")) { t.classList.add("armed"); t.dataset.txt = t.textContent; t.textContent = used ? `Used by ${used} data stream${used > 1 ? "s" : ""} · click again to delete` : "Click again to delete"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = t.dataset.txt; } }, 3000); return; }
     const id = t.dataset.id, what = t.dataset.what;
     if (what === "conn") mutate(tx => removeItem(tx, "connections", id));
     if (what === "external" || what === "block") {
@@ -1785,10 +1938,10 @@ document.addEventListener("click", (e) => {
   }
 });
 
-document.addEventListener("focusin", (e) => { if (e.target.id === "yaml" || e.target.id === "yaml-big") { const f = S.files[S.current]; (f.undo ||= []).push(f.text); } });
+document.addEventListener("focusin", (e) => { if (e.target.id === "yaml" || e.target.id === "yaml-big") { const f = S.files[e.target.id === "yaml-big" ? ymFile() : S.current]; (f.undo ||= []).push(f.text); } });
 document.addEventListener("input", (e) => {
   if (e.target.id !== "yaml" && e.target.id !== "yaml-big") return;
-  const file = S.current, f = S.files[file]; f.text = e.target.value;
+  const file = e.target.id === "yaml-big" ? ymFile() : S.current, f = S.files[file]; f.text = e.target.value;
   if (e.target.id === "yaml-big") ymGutter();
   clearTimeout(S._t);
   S._t = setTimeout(() => {
@@ -1821,7 +1974,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && S.sel && !typing) { S.sel = null; render(); }
 });
 window.addEventListener("hashchange", () => {
-  const want = location.hash.slice(1); const file = Object.keys(S.files).find(f => fileLabel(f) === want) || S.root;
+  const want = location.hash.slice(1); const file = Object.keys(S.files).find(f => isLevel(f) && fileLabel(f) === want) || S.root;
   if (file !== S.current) go(file);
 });
 
@@ -2082,7 +2235,7 @@ async function importFiles(fileList) {
   }
   S._routes = null; scheduleSave();
   go(ok.length === 1 ? ok[0][0] : (S.files[S.current] && !S.files[S.current].missing ? S.current : S.root));
-  toast(`Uploaded ${ok.length} file(s)${bad.length ? `, skipped ${bad.length} that did not parse` : ""}.` + (added.length && !parentMap()[added[0]] && added[0] !== S.root ? ` Link a new level from a block with "detail: ${added[0]}".` : ""), bad.length > 0);
+  toast(`Uploaded ${ok.length} file(s)${bad.length ? `, skipped ${bad.length} that did not parse` : ""}.` + (added.length && !parentMap()[added[0]] && added[0] !== S.root && added[0] !== STREAMS ? ` Link a new level from a block with "detail: ${added[0]}".` : ""), bad.length > 0);
 }
 $("upload-btn").addEventListener("click", () => $("upload-input").click());
 $("upload-input").addEventListener("change", (e) => { const fl = [...e.target.files]; e.target.value = ""; if (fl.length) importFiles(fl); });
@@ -2137,12 +2290,15 @@ async function loadAll() {
         if (r.status === 404 && name === S.root) { S.files[name] = { text: "", savedText: "", data: normalize({}), missing: true }; continue; } // empty model/: offer to create it
         if (!r.ok) throw new Error(r.status);
         const text = await r.text(); S.files[name] = { text, savedText: text }; parseFile(name);
-        for (const b of S.files[name].data.blocks) if (b.detail) queue.push(b.detail);
+        for (const b of S.files[name].data.blocks) if (b.detail && b.detail !== STREAMS) queue.push(b.detail);
       } catch {
         if (name === S.root) { document.body.innerHTML = `<div class="empty"><strong>Could not load model/${esc(S.root)}.</strong><span>Start the viewer with <code>node tools/serve.mjs</code> from the Burrowly folder and open the address it prints.</span></div>`; return false; }
         S.files[name] = { text: "", savedText: "", data: normalize({}), missing: true };
       }
     }
+  }
+  if (!S.embedded && !S.files[STREAMS]) {
+    try { const r = await fetch("model/" + STREAMS, { cache: "no-store" }); if (r.status === 200) { const text = await r.text(); S.files[STREAMS] = { text, savedText: text }; parseFile(STREAMS); } } catch {}
   }
   for (const f of Object.values(S.files)) for (const b of f.data?.blocks || []) if (b.detail && !S.files[b.detail]) S.files[b.detail] = { text: "", savedText: "", data: normalize({}), missing: true };
   return true;
@@ -2151,7 +2307,7 @@ window.addEventListener("beforeunload", (e) => { if (S.canSave && Object.values(
 loadAll().then(ok => {
   if (!ok) return;
   const want = location.hash.slice(1);
-  go(Object.keys(S.files).find(f => fileLabel(f) === want) || S.root);
+  go(Object.keys(S.files).find(f => isLevel(f) && fileLabel(f) === want) || S.root);
 });
 </script>
 </body>

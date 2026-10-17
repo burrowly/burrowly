@@ -14,6 +14,7 @@ The editor writes exactly this YAML, so you can mix both approaches.
 - [8. Reference: every field](#8-reference-every-field)
 - [9. Common mistakes](#9-common-mistakes)
 - [10. Working with git](#10-working-with-git)
+- [11. Data streams](#11-data-streams)
 
 ---
 
@@ -364,6 +365,8 @@ Both the multi-line and the one-line `{ title, url }` forms work. Links open in 
 | Colour like `#0a7` does nothing                 | Quote it: `color: "#0a7"`. Without quotes `#` starts a comment. |
 | A badge `!` gives an error                      | Quote it: `badge: "!"` |
 | "connects to this block one level up but is not drawn here" | Add the missing external and connection in the drill-down, or ignore it while sketching. |
+| Stream: "there is no block ... Did you mean ...?" | A block in a stream path was renamed or removed. Fix the path in `streams.yaml`; the suggestion is the closest existing id. |
+| Stream: "no connection from A to B on any level" | The path skips a block, or the connection is missing. Add the block in between, or draw the connection. |
 
 ---
 
@@ -379,3 +382,103 @@ Both the multi-line and the one-line `{ title, url }` forms work. Links open in 
 - `node tools/check.mjs` runs the Checks tab from the command line and fails on errors. It also
   lists which connection fields are still empty.
 - GitHub Copilot can write and fill in these files for you; see "Using GitHub Copilot" in the README.
+
+---
+
+## 11. Data streams
+
+A connection says *how* two blocks are linked. A **data stream** says *what travels* and
+*where it goes*: for example images from a camera, through the cell PLC, to the vision
+application on the robot PC. One stream usually crosses several connections and often
+several levels.
+
+Streams live in one optional file, `model/streams.yaml`:
+
+```yaml
+streams:
+  - id: depth-images
+    name: Depth images
+    owner: vision-team
+    data: depth image 640x480, 16 bit       # extra fields are shown in the Streams tab
+    rate: 30 fps
+    path:
+      - { block: robot-cell/depth-camera, duration: 4 ms }
+      - { block: robot-cell/cell-plc,     duration: 2 ms }
+      - { block: robot-cell/robot-pc/vision-app, duration: 35 ms, note: grasp point search }
+
+  - id: grasp-points
+    name: Grasp points
+    derived_from: depth-images             # made from the depth images
+    path: [robot-cell/robot-pc/vision-app, robot-cell/cell-plc, robot-cell/gripper]
+```
+
+### The path
+
+- `path` lists the blocks the data passes, **in the order it flows**: source first, receiver last.
+- A block is named by its **drill-down path**: the block ids from `system.yaml` down, joined by `/`.
+  `controller` is a block on the top level; `robot-cell/cell-plc` is the block `cell-plc` inside
+  the drill-down of `robot-cell`. File names don't matter, so renaming a `.yaml` file breaks nothing.
+- You don't list connections. For each pair of neighbours, Burrowly finds the connection between
+  them, on whichever level it is drawn. Leaving a level works through `external:` blocks as usual.
+- A step can be a plain path (`robot-cell/gripper`) or an object with more fields:
+
+| Field      | Meaning |
+|------------|---------|
+| `block`    | The drill-down path (required) |
+| `duration` | How long this step takes: for the first block, producing the data; for the others, getting the data there and handling it. A number and a unit: `ns`, `us`/`µs`, `ms`, `s`, `min`, `h` (`5 ms`, `1.5 s`, `~200 µs`). |
+| `via`      | The connection id to use when two blocks have more than one connection between them |
+| `note`     | Free text shown under the step |
+
+- The path can start rough and get detailed later. `path: [controller, robot-cell]` is a valid
+  stream; Checks then suggests naming the block inside `robot-cell` once its drill-down exists.
+- One source with several receivers: write one stream per receiver. Each stream stays a simple line.
+- A block that appears in several places (say two robot PCs that each run the same application)
+  is a separate block per place, so each stream names the one it uses.
+
+### Stream fields
+
+| Field          | Meaning |
+|----------------|---------|
+| `id`           | Unique id (required) |
+| `name`         | Shown in the Streams tab |
+| `description`  | Free text |
+| `owner`        | Who is responsible for the data |
+| `derived_from` | Id (or list of ids) of the streams this one is computed from |
+| `color`        | Highlight colour, same values as block colours (optional; a colour is picked otherwise) |
+| `links`        | Documentation links, as in section 7 |
+| anything else  | `rate`, `data`, `retention`, ... shown in the Streams tab |
+
+### In the viewer
+
+- **Streams** tab: every stream with its total duration. Click one to see its steps: each block,
+  the protocol / data format / timing of the connection in between, each step's duration and the
+  total. Steps without a duration are counted, so you see what is missing.
+- While a stream is open, the diagram shows its route: numbered blocks, a moving line in the flow
+  direction, and "continues inside" on a block whose drill-down the stream passes through. The
+  highlight follows you when you open other levels.
+- The details of a block list the streams through it; the details of a line list the streams it carries.
+- In Edit mode, renaming a block also updates every stream path that uses it, and deleting a block
+  or line that a stream uses asks again and says how many streams use it.
+
+### What Checks catch
+
+Errors (also from `node tools/check.mjs`, which then exits non-zero):
+
+- a step names a block that doesn't exist (with the closest id as a suggestion)
+- two neighbours have no connection between them on any level
+- the connection exists but points the other way (`direction`)
+- `via` names a connection that doesn't join those two blocks
+- `derived_from` names an unknown stream, or streams derive from each other in a loop
+- duplicate stream ids, the same block twice in a row, or a block followed by a block inside it
+  (list only the inner one)
+
+Checks to review:
+
+- two blocks have more than one connection and no `via` says which one
+- a step is only connected through the blocks around it (drawn one level up, not in the drill-down)
+- one level up has several connections and the inner one has no `realizes:` saying which one it implements
+- the stream rides a line type marked `carries_data: false` (for example
+  `power: { label: Power, color: red, dashed: true, carries_data: false }`)
+- a step passes a block with a drill-down as a whole
+- a duration that can't be read, or a stream with fewer than two blocks
+
