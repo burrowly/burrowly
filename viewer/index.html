@@ -5,41 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Burrowly</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E %3Cellipse cx='32' cy='55' rx='29' ry='7' fill='%231c1a3a'/%3E %3Cpath d='M10 55V36a22 22 0 0 1 44 0v19z' fill='%234b3fd1'/%3E %3Cpath d='M19 32q3 -3 6 0M39 32q3 -3 6 0' fill='none' stroke='%23f5f5fb' stroke-width='3' stroke-linecap='round'/%3E %3Cellipse cx='32' cy='44' rx='10' ry='7.5' fill='%239b93ff'/%3E %3Ccircle cx='32' cy='41' r='4.5' fill='%23f2b705'/%3E %3Cellipse cx='15' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E%3Cellipse cx='49' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E %3Cpath d='M11 52v3M15 51.5v3.5M19 52v3M45 52v3M49 51.5v3.5M53 52v3' stroke='%234b3fd1' stroke-width='1.6' stroke-linecap='round'/%3E %3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;500&family=Nunito+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap">
 <style>
 /* Layout: engineering workbench. Diagram + interface table on the left, inspector on the right. */
 :root {
-  --bg: #f4f6f9; --surface: #ffffff; --surface-2: #edf0f4; --ink: #16202c; --muted: #5a6676;
-  --line: #d3d9e2; --accent: #2457d6; --warn: #b26a00; --warn-bg: #fff4dc; --err: #c62828; --err-bg: #fde8e8;
+  --bg: #f4f4fa; --surface: #ffffff; --surface-2: #ebeaf5; --ink: #1c1a3a; --muted: #5d5b7a;
+  --line: #dad9ea; --accent: #4b3fd1; --warn: #b26a00; --warn-bg: #fff4dc; --err: #c62828; --err-bg: #fde8e8;
   --ok: #18804a; --badge-ink: #ffffff;
-  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-display: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --logo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E %3Cellipse cx='32' cy='55' rx='29' ry='7' fill='%231c1a3a'/%3E %3Cpath d='M10 55V36a22 22 0 0 1 44 0v19z' fill='%234b3fd1'/%3E %3Cpath d='M19 32q3 -3 6 0M39 32q3 -3 6 0' fill='none' stroke='%23f5f5fb' stroke-width='3' stroke-linecap='round'/%3E %3Cellipse cx='32' cy='44' rx='10' ry='7.5' fill='%239b93ff'/%3E %3Ccircle cx='32' cy='41' r='4.5' fill='%23f2b705'/%3E %3Cellipse cx='15' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E%3Cellipse cx='49' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E %3Cpath d='M11 52v3M15 51.5v3.5M19 52v3M45 52v3M49 51.5v3.5M53 52v3' stroke='%234b3fd1' stroke-width='1.6' stroke-linecap='round'/%3E %3C/svg%3E");
   --blue-fill:#dce8ff; --blue-stroke:#2a62e0; --green-fill:#ddf6e6; --green-stroke:#17954a;
-  --purple-fill:#ece6ff; --purple-stroke:#7a3ae8; --gray-fill:#f0f2f5; --gray-stroke:#6b7480;
+  --purple-fill:#ece6ff; --purple-stroke:#7a3ae8; --gray-fill:#f0f0f5; --gray-stroke:#6b6a80;
   --orange-fill:#ffe9dc; --orange-stroke:#dd5410; --amber-fill:#fff2cf; --amber-stroke:#c08400;
   --teal-fill:#d7f4f1; --teal-stroke:#0d8a80; --red-fill:#ffe2e2; --red-stroke:#cf2f2f;
   --pink-fill:#ffe1ef; --pink-stroke:#c9357b; --slate-fill:#e6eaf0; --slate-stroke:#3b4656;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0e1319; --surface: #151c25; --surface-2: #1c2530; --ink: #e5eaf1; --muted: #93a0b1;
-  --line: #2b3644; --accent: #7ea4ff; --warn: #f0b429; --warn-bg: #33270a; --err: #ff7b7b; --err-bg: #3a1818;
-  --ok: #4fd18b; --badge-ink: #0e1319;
+  --bg: #121120; --surface: #1a1930; --surface-2: #23223c; --ink: #ecebfa; --muted: #a3a2c2;
+  --line: #302e4c; --accent: #9b93ff; --warn: #f0b429; --warn-bg: #33270a; --err: #ff7b7b; --err-bg: #3a1818;
+  --ok: #4fd18b; --badge-ink: #121120; --logo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E %3Cellipse cx='32' cy='55' rx='29' ry='7' fill='%2308070f'/%3E %3Cpath d='M10 55V36a22 22 0 0 1 44 0v19z' fill='%234b3fd1'/%3E %3Cpath d='M19 32q3 -3 6 0M39 32q3 -3 6 0' fill='none' stroke='%23f5f5fb' stroke-width='3' stroke-linecap='round'/%3E %3Cellipse cx='32' cy='44' rx='10' ry='7.5' fill='%239b93ff'/%3E %3Ccircle cx='32' cy='41' r='4.5' fill='%23f2b705'/%3E %3Cellipse cx='15' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E%3Cellipse cx='49' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E %3Cpath d='M11 52v3M15 51.5v3.5M19 52v3M45 52v3M49 51.5v3.5M53 52v3' stroke='%234b3fd1' stroke-width='1.6' stroke-linecap='round'/%3E %3C/svg%3E");
   --blue-fill:#18284a; --blue-stroke:#6d9bff; --green-fill:#12301f; --green-stroke:#3fcf7b;
-  --purple-fill:#271d47; --purple-stroke:#a98bff; --gray-fill:#1f252d; --gray-stroke:#9aa4b1;
+  --purple-fill:#271d47; --purple-stroke:#a98bff; --gray-fill:#201f33; --gray-stroke:#9d9cb8;
   --orange-fill:#3a2213; --orange-stroke:#ff8b4d; --amber-fill:#35290b; --amber-stroke:#f0b429;
   --teal-fill:#0f2f2c; --teal-stroke:#2fc6b7; --red-fill:#3a1818; --red-stroke:#ff6b6b;
-  --pink-fill:#3a1729; --pink-stroke:#ff70ae; --slate-fill:#1f2731; --slate-stroke:#aab5c3;
+  --pink-fill:#3a1729; --pink-stroke:#ff70ae; --slate-fill:#1f1e33; --slate-stroke:#b2b1cc;
   color-scheme: dark;
 } }
 :root[data-theme="dark"] {
-  --bg: #0e1319; --surface: #151c25; --surface-2: #1c2530; --ink: #e5eaf1; --muted: #93a0b1;
-  --line: #2b3644; --accent: #7ea4ff; --warn: #f0b429; --warn-bg: #33270a; --err: #ff7b7b; --err-bg: #3a1818;
-  --ok: #4fd18b; --badge-ink: #0e1319;
+  --bg: #121120; --surface: #1a1930; --surface-2: #23223c; --ink: #ecebfa; --muted: #a3a2c2;
+  --line: #302e4c; --accent: #9b93ff; --warn: #f0b429; --warn-bg: #33270a; --err: #ff7b7b; --err-bg: #3a1818;
+  --ok: #4fd18b; --badge-ink: #121120; --logo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E %3Cellipse cx='32' cy='55' rx='29' ry='7' fill='%2308070f'/%3E %3Cpath d='M10 55V36a22 22 0 0 1 44 0v19z' fill='%234b3fd1'/%3E %3Cpath d='M19 32q3 -3 6 0M39 32q3 -3 6 0' fill='none' stroke='%23f5f5fb' stroke-width='3' stroke-linecap='round'/%3E %3Cellipse cx='32' cy='44' rx='10' ry='7.5' fill='%239b93ff'/%3E %3Ccircle cx='32' cy='41' r='4.5' fill='%23f2b705'/%3E %3Cellipse cx='15' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E%3Cellipse cx='49' cy='54' rx='8' ry='4.5' fill='%239b93ff'/%3E %3Cpath d='M11 52v3M15 51.5v3.5M19 52v3M45 52v3M49 51.5v3.5M53 52v3' stroke='%234b3fd1' stroke-width='1.6' stroke-linecap='round'/%3E %3C/svg%3E");
   --blue-fill:#18284a; --blue-stroke:#6d9bff; --green-fill:#12301f; --green-stroke:#3fcf7b;
-  --purple-fill:#271d47; --purple-stroke:#a98bff; --gray-fill:#1f252d; --gray-stroke:#9aa4b1;
+  --purple-fill:#271d47; --purple-stroke:#a98bff; --gray-fill:#201f33; --gray-stroke:#9d9cb8;
   --orange-fill:#3a2213; --orange-stroke:#ff8b4d; --amber-fill:#35290b; --amber-stroke:#f0b429;
   --teal-fill:#0f2f2c; --teal-stroke:#2fc6b7; --red-fill:#3a1818; --red-stroke:#ff6b6b;
-  --pink-fill:#3a1729; --pink-stroke:#ff70ae; --slate-fill:#1f2731; --slate-stroke:#aab5c3;
+  --pink-fill:#3a1729; --pink-stroke:#ff70ae; --slate-fill:#1f1e33; --slate-stroke:#b2b1cc;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -52,9 +55,10 @@ a { color: var(--accent); }
 .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line);
   padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.brand { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; letter-spacing: -.01em; color: var(--accent);
+.brand { display: inline-flex; align-items: center; gap: 7px; font: 700 17px/1 var(--font-display); letter-spacing: -.03em; color: var(--ink); text-transform: lowercase;
   padding-right: 14px; border-right: 1px solid var(--line); white-space: nowrap; }
-.brand svg { width: 18px; height: 18px; }
+.brand svg { display: none; }
+.brand::before { content: ""; width: 26px; height: 26px; background: var(--logo) center / contain no-repeat; }
 @media (max-width: 600px) { .brand { padding-right: 0; border-right: 0; } }
 .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: 600; font-size: 16px; min-width: 0; flex: 1 1 260px; }
 .crumbs button { background: none; border: 0; padding: 2px 4px; border-radius: 4px; cursor: pointer; color: var(--accent); font-weight: 500; }
@@ -207,7 +211,7 @@ body.side-min .side-rail span { writing-mode: vertical-rl; }
 .tabs button { border: 0; background: none; padding: 7px 12px; cursor: pointer; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 .insp { padding: 14px 16px 16px; display: grid; gap: 12px; min-width: 0; overflow-wrap: anywhere; }
-.insp h3 { margin: 0; font-size: 18px; line-height: 1.25; text-wrap: balance; }
+.insp h3 { margin: 0; font-family: var(--font-display); letter-spacing: -.01em; font-size: 18px; line-height: 1.25; text-wrap: balance; }
 .insp .kicker { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
 .insp p { margin: 0; }
 dl.attrs { display: grid; grid-template-columns: minmax(90px, auto) minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 13px; }
@@ -643,7 +647,7 @@ const within = (inner, outer) => inner === outer || inner.startsWith(outer + "/"
 const streamsThroughBlock = (p) => p ? streamsOf().streams.filter(st => st.steps.some(x => x.path && within(x.path, p))) : [];
 const streamsOnConn = (file, c, i) => (streamsOf().carries.get(file + "#" + (c.id || "#" + (i + 1))) || []).map(id => streamsOf().streams.find(s => s.id === id)).filter(Boolean);
 const streamBtns = (list) => `<ul class="list">${list.map(st => `<li><button type="button" data-stream="${esc(st.id)}"><i class="tdot" style="background:${streamColor(st.id)}"></i>${esc(st.name)}${st.ok ? "" : ` <span class="chip err">error</span>`}</button></li>`).join("")}</ul>`;
-const STREAM_COLORS = ["#2457d6", "#c2410c", "#0f766e", "#9333ea", "#b45309", "#be185d", "#4d7c0f", "#0369a1"];
+const STREAM_COLORS = ["#4b3fd1", "#c2410c", "#0f766e", "#9333ea", "#b45309", "#be185d", "#4d7c0f", "#0369a1"];
 function streamColor(id) {
   const raw = streamsOf().streams.find(s => s.id === id)?.raw?.color;
   if (raw) return paint(raw).stroke;

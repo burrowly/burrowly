@@ -1,3 +1,5 @@
+<img src="brand/burrowly-mark.svg" width="72" alt="Burrowly logo: a mole peeking out of its burrow">
+
 # Burrowly
 
 Architecture diagrams as code: dig from the whole system down into every subsystem.
