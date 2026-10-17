@@ -1,0 +1,2158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Burrowly</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: engineering workbench. Diagram + interface table on the left, inspector on the right. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --surface-2: #edf0f4; --ink: #16202c; --muted: #5a6676;
+  --line: #d3d9e2; --accent: #2457d6; --warn: #b26a00; --warn-bg: #fff4dc; --err: #c62828; --err-bg: #fde8e8;
+  --ok: #18804a; --badge-ink: #ffffff;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --blue-fill:#dce8ff; --blue-stroke:#2a62e0; --green-fill:#ddf6e6; --green-stroke:#17954a;
+  --purple-fill:#ece6ff; --purple-stroke:#7a3ae8; --gray-fill:#f0f2f5; --gray-stroke:#6b7480;
+  --orange-fill:#ffe9dc; --orange-stroke:#dd5410; --amber-fill:#fff2cf; --amber-stroke:#c08400;
+  --teal-fill:#d7f4f1; --teal-stroke:#0d8a80; --red-fill:#ffe2e2; --red-stroke:#cf2f2f;
+  --pink-fill:#ffe1ef; --pink-stroke:#c9357b; --slate-fill:#e6eaf0; --slate-stroke:#3b4656;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1319; --surface: #151c25; --surface-2: #1c2530; --ink: #e5eaf1; --muted: #93a0b1;
+  --line: #2b3644; --accent: #7ea4ff; --warn: #f0b429; --warn-bg: #33270a; --err: #ff7b7b; --err-bg: #3a1818;
+  --ok: #4fd18b; --badge-ink: #0e1319;
+  --blue-fill:#18284a; --blue-stroke:#6d9bff; --green-fill:#12301f; --green-stroke:#3fcf7b;
+  --purple-fill:#271d47; --purple-stroke:#a98bff; --gray-fill:#1f252d; --gray-stroke:#9aa4b1;
+  --orange-fill:#3a2213; --orange-stroke:#ff8b4d; --amber-fill:#35290b; --amber-stroke:#f0b429;
+  --teal-fill:#0f2f2c; --teal-stroke:#2fc6b7; --red-fill:#3a1818; --red-stroke:#ff6b6b;
+  --pink-fill:#3a1729; --pink-stroke:#ff70ae; --slate-fill:#1f2731; --slate-stroke:#aab5c3;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0e1319; --surface: #151c25; --surface-2: #1c2530; --ink: #e5eaf1; --muted: #93a0b1;
+  --line: #2b3644; --accent: #7ea4ff; --warn: #f0b429; --warn-bg: #33270a; --err: #ff7b7b; --err-bg: #3a1818;
+  --ok: #4fd18b; --badge-ink: #0e1319;
+  --blue-fill:#18284a; --blue-stroke:#6d9bff; --green-fill:#12301f; --green-stroke:#3fcf7b;
+  --purple-fill:#271d47; --purple-stroke:#a98bff; --gray-fill:#1f252d; --gray-stroke:#9aa4b1;
+  --orange-fill:#3a2213; --orange-stroke:#ff8b4d; --amber-fill:#35290b; --amber-stroke:#f0b429;
+  --teal-fill:#0f2f2c; --teal-stroke:#2fc6b7; --red-fill:#3a1818; --red-stroke:#ff6b6b;
+  --pink-fill:#3a1729; --pink-stroke:#ff70ae; --slate-fill:#1f2731; --slate-stroke:#aab5c3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font-ui); }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.brand { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; letter-spacing: -.01em; color: var(--accent);
+  padding-right: 14px; border-right: 1px solid var(--line); white-space: nowrap; }
+.brand svg { width: 18px; height: 18px; }
+@media (max-width: 600px) { .brand { padding-right: 0; border-right: 0; } }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: 600; font-size: 16px; min-width: 0; flex: 1 1 260px; }
+.crumbs button { background: none; border: 0; padding: 2px 4px; border-radius: 4px; cursor: pointer; color: var(--accent); font-weight: 500; }
+.crumbs button:hover { background: var(--surface-2); }
+.crumbs .sep { color: var(--muted); font-weight: 400; }
+.crumbs .here { padding: 2px 4px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 11px; cursor: pointer; font-weight: 500; font-size: 13px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.err { background: var(--err-bg); color: var(--err); }
+.chip.ok { color: var(--ok); border-color: var(--line); }
+.chip.neutral { background: var(--surface-2); color: var(--muted); }
+button.chip { cursor: pointer; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--side-w, 400px); gap: 16px; align-items: start;
+  padding-block: 16px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+@media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.main { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 16px 0; flex-wrap: wrap; }
+.panel-head h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.hint { color: var(--muted); font-size: 12px; }
+
+/* diagram viewport: fixed height (drag the bottom-right corner to resize), zoom + pan inside */
+.cv-wrap { position: relative; height: clamp(340px, 62vh, 900px); min-height: 220px; resize: vertical; overflow: hidden; margin: 6px 8px 0;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  background-image: radial-gradient(circle, var(--line) 1px, transparent 1.2px); background-size: 24px 24px; }
+.canvas { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y; cursor: grab; }
+.canvas.panning { cursor: grabbing; }
+.canvas svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
+.zoombar { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 2px; padding: 3px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 2; }
+.zoombar button { border: 0; background: none; min-width: 30px; height: 28px; padding: 0 7px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.zoombar button:hover { background: var(--surface-2); }
+.zoombar .zpct { min-width: 52px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.zoombar .sep { width: 1px; height: 18px; background: var(--line); margin: 0 3px; }
+.cv-help { position: absolute; left: 10px; bottom: 10px; font-size: 11.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 6px; padding: 3px 8px; z-index: 2; pointer-events: none; }
+@media (max-width: 700px) { .cv-help { display: none; } }
+/* expanded: the diagram fills the window under the top bar, details stay on the right */
+body.cv-max { overflow: hidden; }
+body.cv-max .layout { position: fixed; z-index: 4; left: 0; right: 0; top: var(--tb-h, 56px); bottom: 0; background: var(--bg); padding-block: 12px; align-items: stretch; }
+body.cv-max .main { grid-template-rows: minmax(0, 1fr); min-height: 0; }
+body.cv-max .main > .panel:not(:first-child) { display: none; }
+body.cv-max .main > .panel:first-child { display: flex; flex-direction: column; min-height: 0; }
+body.cv-max .cv-wrap { flex: 1 1 auto; height: auto; resize: none; }
+body.cv-max .canvas { touch-action: none; }
+body.cv-max #canvas-hint, body.cv-max .cv-help { display: none; }
+body.cv-max .legend { padding-block: 6px 8px; }
+body.cv-max .side { position: relative; top: 0; min-height: 0; display: flex; flex-direction: column; }
+body.cv-max .side > .panel { flex: 0 1 auto; min-height: 0; overflow: auto; }
+@media (max-width: 960px) {
+  body.cv-max .layout { grid-template-rows: minmax(0, 1fr) minmax(0, 32%); gap: 8px; padding-block: 8px; }
+  body.cv-max .panel-head { padding-top: 8px; }
+  body.cv-max .side { max-height: none; }
+}
+.editing .canvas svg .block { cursor: grab; }
+.block { cursor: pointer; }
+.block text { pointer-events: none; }
+.block .name { font: 600 15px var(--font-ui); fill: var(--ink); }
+.block .sub { font: 400 12px var(--font-ui); fill: var(--muted); }
+.block .badge-t { font: 700 11px var(--font-ui); fill: var(--badge-ink); }
+.block .open-t { font: 500 11px var(--font-ui); fill: var(--accent); }
+.block .open { cursor: pointer; pointer-events: all; }
+.block .open:hover rect { fill: var(--surface-2); }
+.block:hover .box { stroke-width: 2.5; }
+.block.sel .box { stroke-width: 3; }
+.edge { fill: none; stroke-width: 2; }
+.edge-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
+.conn:hover .edge, .conn.sel .edge { stroke-width: 3.5; }
+.elabel { font: 500 12px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
+.dim { opacity: .22; }
+svg .ext-note { font: 400 11px var(--font-ui); fill: var(--muted); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 16px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+.ln { width: 26px; height: 0; border-top: 2.5px solid; display: inline-block; }
+
+.table-wrap { overflow-x: auto; padding: 8px 0 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:nth-child(2) { white-space: nowrap; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; white-space: nowrap; }
+td.mono { font-family: var(--font-mono); font-size: 12px; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr.sel { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.missing { color: var(--warn); font-style: italic; font-size: 12px; }
+.tdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+
+.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 960px) { .side { position: static; } }
+/* details panel: collapse to a slim rail, or drag its left edge to resize */
+.tabs .side-toggle { margin-left: auto; padding: 0; align-self: center; border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 15px;
+  width: 30px; height: 28px; border-radius: 5px; margin-bottom: 4px; }
+.tabs .side-toggle:hover { background: var(--surface-2); color: var(--ink); }
+.side-rail { display: none; }
+.side-resize { position: absolute; left: -12px; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 3; touch-action: none; }
+.side-resize::after { content: ""; position: absolute; left: 4px; top: 50%; width: 2px; height: 36px; margin-top: -18px; border-radius: 1px; background: var(--line); }
+.side-resize:hover::after, body.side-resizing .side-resize::after { background: var(--accent); height: 60px; margin-top: -30px; }
+.toast { position: fixed; z-index: 60; left: 50%; bottom: max(20px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px));
+  background: var(--ink); color: var(--surface); padding: 9px 14px; border-radius: 8px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.2); white-space: pre-line; }
+.toast.err { background: var(--err); color: #fff; }
+body.dropping::after { content: "Drop .yaml or .zip files to upload them"; position: fixed; inset: 12px; z-index: 50; display: grid; place-items: center;
+  border: 3px dashed var(--accent); border-radius: 14px; background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--accent); font-size: 18px; font-weight: 600; pointer-events: none; }
+body.side-resizing { cursor: col-resize; user-select: none; -webkit-user-select: none; }
+body.side-min .layout { grid-template-columns: minmax(0, 1fr) 40px; }
+body.side-min .side > .panel, body.side-min .side-resize { display: none; }
+body.side-min .side-rail { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 40px; padding: 12px 0; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface); cursor: pointer; color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+body.side-min .side-rail:hover { color: var(--ink); background: var(--surface-2); }
+body.side-min .side-rail span { writing-mode: vertical-rl; }
+@media (max-width: 960px) {
+  .side-resize { display: none; }
+  body.side-min .layout { grid-template-columns: minmax(0, 1fr); }
+  body.side-min .side-rail { flex-direction: row; width: 100%; justify-content: center; padding: 8px; }
+  body.side-min .side-rail span { writing-mode: horizontal-tb; }
+  body.cv-max.side-min .layout { grid-template-rows: minmax(0, 1fr) auto; }
+}
+.tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
+.tabs button { border: 0; background: none; padding: 7px 12px; cursor: pointer; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.insp { padding: 14px 16px 16px; display: grid; gap: 12px; min-width: 0; overflow-wrap: anywhere; }
+.insp h3 { margin: 0; font-size: 18px; line-height: 1.25; text-wrap: balance; }
+.insp .kicker { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+.insp p { margin: 0; }
+dl.attrs { display: grid; grid-template-columns: minmax(90px, auto) minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 13px; }
+dl.attrs dt { color: var(--muted); }
+dl.attrs dd { margin: 0; font-family: var(--font-mono); font-size: 12.5px; min-width: 0; }
+.list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.list button { width: 100%; text-align: left; background: var(--surface-2); border: 0; border-radius: 6px; padding: 6px 9px; cursor: pointer; font-size: 13px; }
+.list button:hover { outline: 1px solid var(--line); }
+.meter { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--ok); }
+.issue { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.issue:last-child { border-bottom: 0; }
+.issue .where { color: var(--muted); font-family: var(--font-mono); font-size: 11.5px; }
+
+.editor { display: grid; gap: 10px; padding: 12px 16px 16px; }
+.editor textarea { width: 100%; min-height: 380px; resize: vertical; font: 12.5px/1.55 var(--font-mono); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 10px; tab-size: 2; white-space: pre; overflow: auto; }
+.editor .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.editor fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px 10px; margin: 0; display: grid; gap: 6px; }
+.editor legend { font-size: 12px; color: var(--muted); padding: 0 4px; font-weight: 600; }
+.editor input, .editor select { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; padding: 4px 7px; font-size: 13px; min-width: 0; flex: 1 1 110px; }
+.status-line { font-size: 12px; color: var(--muted); min-height: 1.5em; }
+.status-line.err { color: var(--err); }
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
+@media (prefers-reduced-motion: no-preference) { .conn .edge, .block .box { transition: stroke-width .12s; } }
+
+/* ---- large YAML editor ---- */
+.ymodal { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; width: min(780px, 56vw); background: var(--surface); border-left: 1px solid var(--line);
+  box-shadow: -12px 0 32px rgba(0,0,0,.12); display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-right: env(safe-area-inset-right, 0px); }
+body.ym-open .layout { padding-right: calc(min(780px, 56vw) + 16px); grid-template-columns: minmax(0, 1fr); }
+body.ym-open .side { display: none; }
+@media (max-width: 900px) {
+  .ymodal { width: 100%; padding-left: env(safe-area-inset-left, 0px); border-left: 0; }
+  body.ym-open { overflow: hidden; }
+}
+.ym-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.ym-titles { display: grid; min-width: 0; }
+.ym-titles strong { font-size: 15px; }
+.ym-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.ym-body { flex: 1; min-height: 0; display: flex; background: var(--surface-2); }
+.ym-gutter { margin: 0; padding: 14px 10px 14px 12px; text-align: right; color: var(--muted); opacity: .7; font: var(--ym-size, 14px)/1.65 var(--font-mono); overflow: hidden; user-select: none; border-right: 1px solid var(--line); min-width: 3.2em; }
+.ymodal textarea { flex: 1; min-width: 0; border: 0; outline: none; resize: none; background: transparent; color: var(--ink); padding: 14px 16px; font: var(--ym-size, 14px)/1.65 var(--font-mono); tab-size: 2; white-space: pre; overflow: auto; }
+.ymodal.wrap textarea { white-space: pre-wrap; }
+.ymodal.wrap .ym-gutter { display: none; }
+.ym-foot { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 12px; }
+.ym-foot .status-line { min-height: 0; }
+@media (max-width: 600px) { .ym-keys { display: none; } }
+/* ---- line mode toggle ---- */
+.seg { display: inline-flex; align-items: center; gap: 0; }
+.seg .hint { margin-right: 8px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); padding: 3px 10px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--muted); }
+.seg button:first-of-type { border-radius: 6px 0 0 6px; }
+.seg button:last-of-type { border-radius: 0 6px 6px 0; border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+/* ---- edit mode: palette, handles, forms ---- */
+.palette { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 10px 16px 2px; font-size: 12px; color: var(--muted); }
+.pal { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid; border-radius: 7px; padding: 4px 10px; cursor: grab; font-size: 12.5px; font-weight: 500; color: var(--ink); user-select: none; -webkit-user-select: none; touch-action: none; }
+.pal:active { cursor: grabbing; }
+.handle { cursor: crosshair; opacity: 0; transition: opacity .12s; }
+.editing .block:hover .handle, .editing .handle.show { opacity: 1; }
+.handle circle { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.handle text { font: 700 12px var(--font-ui); fill: var(--accent); pointer-events: none; }
+.tmpline { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; fill: none; pointer-events: none; }
+.drop-ghost { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 4; pointer-events: none; }
+.form { display: grid; gap: 10px; }
+.field { display: grid; gap: 3px; min-width: 0; }
+.field > span { font-size: 12px; color: var(--muted); font-weight: 500; }
+.field > span .req { color: var(--warn); font-weight: 600; }
+.field input, .field select, .field textarea, .kv input, .kv select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+.field textarea { min-height: 64px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus, .kv input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.field.need input, .field.need select { border-color: var(--warn); background: var(--warn-bg); }
+.two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
+.sub-h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; }
+.kv { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) auto; gap: 6px; align-items: center; }
+.kv.kind-row { grid-template-columns: auto minmax(0,1fr) 48px 96px auto; }
+.mv { display: inline-flex; }
+.mv .x { padding: 4px 3px; font-size: 13px; }
+.kv.type-row { grid-template-columns: auto minmax(0,1fr) 96px auto auto; }
+.kv label { white-space: nowrap; }
+.kv input[readonly] { background: var(--surface-2); color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+.x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px 6px; border-radius: 4px; }
+.x:hover { background: var(--err-bg); color: var(--err); }
+.linkbtn { border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12px; font-weight: 600; padding: 0; text-transform: none; letter-spacing: 0; }
+.btn.danger { color: var(--err); border-color: var(--line); }
+.btn.danger.armed { background: var(--err); color: var(--surface); border-color: var(--err); }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.idline { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+/* ---- export menu + print/PDF ---- */
+.menu-wrap { position: relative; }
+.menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 4px; display: grid; width: max-content; max-width: calc(100vw - 32px); }
+.menu button { background: none; border: 0; text-align: left; padding: 7px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.menu button:hover, .menu button:focus-visible { background: var(--surface-2); }
+.menu button small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+#print-root { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.printing { background: #fff; }
+  body.printing > :not(#print-root) { display: none !important; }
+  body.printing #print-root { display: block; }
+  .pp { break-after: page; }
+  .pp:last-child { break-after: auto; }
+  .pp h1 { font-size: 17px; margin: 0; }
+  .pp .pp-path { color: var(--muted); font-size: 11px; margin: 0 0 6px; }
+  .pp svg { display: block; width: 100%; height: auto; max-height: 145mm; }
+  .pp .legend { padding: 6px 0; border-top: 0; }
+  .pp table { font-size: 10px; }
+  .pp th, .pp td { padding: 3px 6px; }
+  .pp tr { break-inside: avoid; }
+  .pp .pp-foot { color: var(--muted); font-size: 9.5px; margin-top: 6px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand" title="Burrowly: dig into your system architecture"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 16a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="10" cy="15.5" r="2.4" fill="currentColor"/></svg>Burrowly</span>
+  <nav class="crumbs" id="crumbs" aria-label="Diagram levels"></nav>
+  <div class="tools">
+    <button class="chip" id="issues-chip" type="button"></button>
+    <span class="chip neutral" id="save-chip" hidden></span>
+    <button class="btn" id="undo-btn" type="button" hidden title="Undo (Ctrl+Z)">Undo</button>
+    <button class="btn" id="upload-btn" type="button" title="Upload a .yaml file or a .zip of model files (or drop one on the page)">Upload</button>
+    <input type="file" id="upload-input" accept=".yaml,.yml,.zip,application/zip,text/yaml" multiple hidden>
+    <div class="menu-wrap">
+      <button class="btn" id="export-btn" type="button" aria-haspopup="menu" aria-expanded="false">Export ▾</button>
+      <div class="menu" id="export-menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-export="pdf-all">PDF – all levels<small>One page per diagram, with its interface table</small></button>
+        <button type="button" role="menuitem" data-export="pdf">PDF – this level</button>
+        <button type="button" role="menuitem" data-export="png">PNG image – this level</button>
+        <button type="button" role="menuitem" data-export="svg">SVG vector – this level<small>Opens in Visio, draw.io, Inkscape, PowerPoint</small></button>
+        <button type="button" role="menuitem" data-export="yaml">YAML – this level<small>The .yaml file behind this diagram</small></button>
+        <button type="button" role="menuitem" data-export="yaml-all">YAML – all levels (.zip)<small>Every file in model/, ready to unzip into a repo</small></button>
+      </div>
+    </div>
+    <button class="btn" id="edit-btn" type="button" aria-pressed="false">Edit</button>
+  </div>
+</header>
+
+<div class="layout" id="layout">
+  <div class="main">
+    <section class="panel">
+      <div class="panel-head"><h2 id="level-title">Diagram</h2><div class="seg" role="group" aria-label="How lines are drawn"><span class="hint">Lines</span><button type="button" data-lines="bundled">Bundled</button><button type="button" data-lines="separate">Separate</button></div></div>
+      <div class="hint" id="canvas-hint" style="padding:2px 16px 0">Click a block or line for details. Double-click a stacked block to open it.</div>
+      <div class="palette" id="palette" hidden></div>
+      <div class="cv-wrap" id="cv-wrap">
+        <div class="canvas" id="canvas"></div>
+        <div class="cv-help" id="cv-help">Drag empty space to pan · Ctrl/⌘ + scroll or pinch to zoom</div>
+        <div class="zoombar" role="group" aria-label="Zoom">
+          <button type="button" data-zoom="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
+          <button type="button" class="zpct" data-zoom="100" id="zoom-pct" title="Reset to 100%">100%</button>
+          <button type="button" data-zoom="in" title="Zoom in (+)" aria-label="Zoom in">+</button>
+          <span class="sep"></span>
+          <button type="button" data-zoom="fit" title="Fit diagram (0)">Fit</button>
+          <button type="button" data-zoom="max" id="max-btn" title="Expand (F) · Esc to close" aria-pressed="false">⤢ Expand</button>
+        </div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Interfaces on this level</h2><span class="hint" id="iface-summary"></span></div>
+      <div class="table-wrap" id="iface"></div>
+    </section>
+  </div>
+
+  <aside class="side" id="side">
+    <div class="side-resize" id="side-resize" title="Drag to resize · double-click to reset" aria-hidden="true"></div>
+    <button class="side-rail" type="button" data-side="toggle" title="Show details (D)" aria-label="Show the details panel"><b aria-hidden="true">⇤</b><span>Details</span></button>
+    <section class="panel">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-details" aria-selected="true" type="button">Details</button>
+        <button role="tab" id="tab-yaml" aria-selected="false" type="button">YAML</button>
+        <button role="tab" id="tab-types" aria-selected="false" type="button" hidden>Types</button>
+        <button role="tab" id="tab-issues" aria-selected="false" type="button">Checks</button>
+        <button class="side-toggle" type="button" data-side="toggle" title="Collapse the details panel (D)" aria-label="Collapse the details panel">⇥</button>
+      </div>
+      <div id="tabpanel"></div>
+    </section>
+  </aside>
+</div>
+
+<div id="print-root" aria-hidden="true"></div>
+
+<div class="ymodal" id="ymodal" hidden role="dialog" aria-modal="false" aria-labelledby="ym-title">
+  <div class="ym-head">
+    <div class="ym-titles"><strong id="ym-title">YAML</strong><span class="hint" id="ym-file"></span></div>
+    <div class="ym-tools">
+      <button class="btn" type="button" data-act="ym-font" data-d="-1" aria-label="Smaller text">A−</button>
+      <button class="btn" type="button" data-act="ym-font" data-d="1" aria-label="Larger text">A+</button>
+      <button class="btn" type="button" data-act="ym-wrap" aria-pressed="false">Wrap</button>
+      <button class="btn" type="button" data-act="copy-yaml" id="ym-copy">Copy</button>
+      <button class="btn" type="button" data-export="yaml" title="Download this YAML file">Download</button>
+      <button class="btn primary" type="button" data-act="ym-close">Done</button>
+    </div>
+  </div>
+  <div class="ym-body"><pre class="ym-gutter" id="ym-gutter" aria-hidden="true"></pre><textarea id="yaml-big" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="YAML file"></textarea></div>
+  <div class="ym-foot"><span id="ym-status" class="status-line"></span><button class="linkbtn" type="button" data-act="ym-goto" id="ym-goto" hidden>Go to error</button><span class="hint ym-keys">Tab indents · Esc closes · the diagram updates as you type</span></div>
+</div>
+
+<script src="vendor/js-yaml.min.js"></script>
+<script>
+"use strict";
+/* ------------------------------------------------------------------ constants */
+const PX = 290, PY = 170, BW = 190, BH = 70, M = 40;
+const NAMED = ["blue","green","purple","gray","orange","amber","teal","red","pink","slate"];
+const CORE_CONN_FIELDS = ["type","protocol","data_format","timing","owner"];
+const CONN_HIDDEN = new Set(["id","from","to","direction","label","route","links","notes","realizes"]);
+const BLOCK_HIDDEN = new Set(["id","name","subtitle","kind","at","detail","links","description"]);
+
+/* ------------------------------------------------------------------ state */
+const S = {
+  files: {},            // name -> { text, savedText, data, error }
+  root: "system.yaml",
+  current: "system.yaml",
+  sel: null,            // { t: "block"|"conn", id }
+  tab: "details",
+  editing: false,
+  canSave: false,
+  embedded: false,
+  msg: "", msgErr: false,
+  lines: (() => { try { return localStorage.getItem("arch.lines") || "bundled"; } catch { return "bundled"; } })(),
+};
+
+/* ------------------------------------------------------------------ helpers */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtNum = (n) => String(Math.round(n * 2) / 2);
+const isEmpty = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+const fileLabel = (f) => f.replace(/\.ya?ml$/, "");
+function paint(c) {
+  c = c || "gray";
+  if (NAMED.includes(c)) return { fill: `var(--${c}-fill)`, stroke: `var(--${c}-stroke)` };
+  return { fill: `color-mix(in srgb, ${c} 16%, var(--surface))`, stroke: c };
+}
+function fmtVal(v) {
+  if (Array.isArray(v)) return v.map(x => typeof x === "object" ? JSON.stringify(x) : String(x)).join(", ");
+  if (v && typeof v === "object") return Object.entries(v).map(([k, x]) => `${k}: ${fmtVal(x)}`).join("; ");
+  return String(v);
+}
+function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "item"; }
+
+/* ------------------------------------------------------------------ parsing */
+function normalize(d) {
+  if (!d || typeof d !== "object" || Array.isArray(d)) d = {};
+  const asArr = (v) => Array.isArray(v) ? v.filter(x => x && typeof x === "object") : [];
+  d.blocks = asArr(d.blocks);
+  d.connections = asArr(d.connections);
+  d.external = asArr(d.external).map(e => typeof e === "string" ? { id: e } : e);
+  d.links = asArr(d.links);
+  d.kinds = (d.kinds && typeof d.kinds === "object") ? d.kinds : {};
+  d.connection_types = (d.connection_types && typeof d.connection_types === "object") ? d.connection_types : {};
+  for (const b of d.blocks) if (b.id !== undefined) b.id = String(b.id);
+  for (const c of d.connections) { if (c.from !== undefined) c.from = String(c.from); if (c.to !== undefined) c.to = String(c.to); }
+  return d;
+}
+function parseFile(name) {
+  const f = S.files[name];
+  try { f.data = normalize(jsyaml.load(f.text)); f.error = null; }
+  catch (e) { f.error = e.message.split("\n")[0]; f.errLine = e.mark?.line; if (!f.data) f.data = normalize({}); }
+}
+
+/* ------------------------------------------------------------------ model queries */
+function parentMap() {
+  const m = {};
+  for (const [name, f] of Object.entries(S.files)) {
+    for (const b of f.data?.blocks || []) if (b.detail && !m[b.detail]) m[b.detail] = { file: name, block: b.id };
+  }
+  return m;
+}
+function ancestors(file) {
+  const pm = parentMap(), out = []; let cur = file; const seen = new Set([file]);
+  while (pm[cur] && !seen.has(pm[cur].file)) { cur = pm[cur].file; seen.add(cur); out.push(cur); }
+  return out; // nearest first
+}
+function kindsFor(file) {
+  const chain = [file, ...ancestors(file)].reverse(); const k = {}, t = {};
+  for (const f of chain) { Object.assign(k, S.files[f]?.data?.kinds); Object.assign(t, S.files[f]?.data?.connection_types); }
+  return { kinds: k, types: t };
+}
+function resolveExternal(file, id) {
+  for (const a of ancestors(file)) {
+    const d = S.files[a]?.data; if (!d) continue;
+    const b = d.blocks.find(x => x.id === id); if (b) return { ...b, from: a };
+    const e = d.external.find(x => String(x.id) === id);
+    if (e) { const r = resolveExternal(a, id); if (r) return r; }
+  }
+  return null;
+}
+function levelNodes(file) {
+  const d = S.files[file].data, nodes = [];
+  for (const b of d.blocks) nodes.push({ ...b, ext: false });
+  for (const e of d.external) {
+    const r = resolveExternal(file, String(e.id));
+    nodes.push({ ...(r || {}), id: String(e.id), name: r?.name || String(e.id), at: e.at, ext: true, extFound: !!r, detail: undefined });
+  }
+  // auto-place blocks without a valid position
+  const taken = new Set(nodes.filter(n => validAt(n.at)).map(n => n.at.join(",")));
+  let i = 0;
+  for (const n of nodes) if (!validAt(n.at)) {
+    while (taken.has(`${i % 4},${Math.floor(i / 4) + 4}`)) i++;
+    n.at = [i % 4, Math.floor(i / 4) + 4]; n.autoPlaced = true; taken.add(n.at.join(",")); i++;
+  }
+  return nodes;
+}
+function validAt(a) { return Array.isArray(a) && a.length >= 2 && a.every(x => typeof x === "number" && isFinite(x)); }
+function geom(n) { const cx = M + BW / 2 + n.at[0] * PX, cy = M + BH / 2 + n.at[1] * PY; return { cx, cy, x: cx - BW / 2, y: cy - BH / 2, w: BW, h: BH }; }
+function requiredFields() { return S.files[S.root]?.data?.required_connection_fields || CORE_CONN_FIELDS; }
+function missingFields(c) { return requiredFields().filter(f => isEmpty(c[f])); }
+
+/* ------------------------------------------------------------------ checks */
+function checks() {
+  const out = []; const pm = parentMap();
+  const add = (sev, file, msg, sel) => out.push({ sev, file, msg, sel });
+  for (const [name, f] of Object.entries(S.files)) {
+    if (f.missing) continue;
+    if (f.error) { add("err", name, "YAML error: " + f.error); continue; }
+    const d = f.data, { kinds, types } = kindsFor(name);
+    const ids = new Map();
+    for (const b of d.blocks) {
+      if (!b.id) { add("err", name, `Block "${b.name || "?"}" has no id`); continue; }
+      if (ids.has(b.id)) add("err", name, `Duplicate id "${b.id}"`, { t: "block", id: b.id });
+      ids.set(b.id, b);
+      if (!b.name) add("warn", name, `Block "${b.id}" has no name`, { t: "block", id: b.id });
+      if (b.kind && !kinds[b.kind]) add("warn", name, `Block "${b.id}" uses unknown kind "${b.kind}"`, { t: "block", id: b.id });
+      if (!validAt(b.at)) add("warn", name, `Block "${b.id}" has no position (at: [col, row]); placed automatically`, { t: "block", id: b.id });
+      if (b.detail && S.files[b.detail]?.missing) add("warn", name, `"${b.id}" points to ${b.detail}, which does not exist yet`, { t: "block", id: b.id });
+    }
+    for (const e of d.external) {
+      const id = String(e.id);
+      if (ids.has(id)) add("err", name, `"${id}" is both a block and an external`);
+      ids.set(id, e);
+      if (!pm[name]) add("warn", name, `External "${id}" listed, but no block opens this file`);
+      else if (!resolveExternal(name, id)) add("err", name, `External "${id}" not found on any level above`);
+    }
+    const pos = new Map();
+    for (const n of [...d.blocks, ...d.external]) if (validAt(n.at)) {
+      const k = n.at.join(","); if (pos.has(k)) add("warn", name, `"${n.id}" and "${pos.get(k)}" are at the same position`, { t: "block", id: String(n.id) });
+      pos.set(k, n.id);
+    }
+    const cids = new Set();
+    d.connections.forEach((c, i) => {
+      const cid = c.id || `#${i + 1}`;
+      if (c.id && cids.has(c.id)) add("err", name, `Duplicate connection id "${c.id}"`);
+      cids.add(c.id);
+      if (!ids.has(c.from)) add("err", name, `Connection ${cid}: "from: ${c.from}" is not a block on this level`, { t: "conn", id: c.id });
+      if (!ids.has(c.to)) add("err", name, `Connection ${cid}: "to: ${c.to}" is not a block on this level`, { t: "conn", id: c.id });
+      if (c.type && !types[c.type]) add("warn", name, `Connection ${cid} uses unknown type "${c.type}"`, { t: "conn", id: c.id });
+      if (c.realizes && pm[name]) {
+        const pc = S.files[pm[name].file].data.connections.find(x => x.id === c.realizes);
+        if (!pc) add("err", name, `Connection ${cid} realizes "${c.realizes}", which is not a connection one level up`, { t: "conn", id: c.id });
+      }
+    });
+    // boundary consistency: every connection of the parent block should appear inside
+    if (pm[name]) {
+      const { file: pf, block: pb } = pm[name];
+      for (const pc of S.files[pf].data.connections) {
+        if (pc.from !== pb && pc.to !== pb) continue;
+        const other = pc.from === pb ? pc.to : pc.from;
+        const ok = d.connections.some(c => c.realizes === pc.id) ||
+                   d.connections.some(c => c.from === other || c.to === other);
+        if (!ok) add("warn", name, `"${pc.id || other}" (${S.files[pf].data.blocks.find(b => b.id === other)?.name || other}) connects to this block one level up but is not drawn here`);
+      }
+    }
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ edge routing */
+// Which side of each block a connection attaches to (same rules as route()).
+function endSides(c, A, B) {
+  const a = geom(A), b = geom(B), eps = 1;
+  if (Math.abs(a.cy - b.cy) < eps) return b.cx > a.cx ? ["right", "left"] : ["left", "right"];
+  if (Math.abs(a.cx - b.cx) < eps) return b.cy > a.cy ? ["bottom", "top"] : ["top", "bottom"];
+  const aUp = a.cy < b.cy, up = aUp ? a : b, lo = aUp ? b : a;
+  const loSide = c.route === "L" ? (lo.cx > up.cx ? "left" : "right") : "top";
+  return aUp ? ["bottom", loSide] : [loSide, "bottom"];
+}
+// Attachment points on a block side. "separate": every line gets its own point.
+// "bundled": lines of the same type share a point (bus), different types never do.
+const slotKey = (c, i) => S.lines === "separate" ? "c" + i : "t:" + (c.type || "_none");
+function portOffsets(conns, byId) {
+  const groups = new Map(), off = new Map();
+  conns.forEach((c, i) => {
+    const A = byId.get(c.from), B = byId.get(c.to); if (!A || !B || A === B) return;
+    const [sa, sb] = endSides(c, A, B);
+    for (const [n, side, other, end] of [[A, sa, B, "a"], [B, sb, A, "b"]]) {
+      const k = n.id + ":" + side; if (!groups.has(k)) groups.set(k, []);
+      const og = geom(other); groups.get(k).push({ key: i + end, side, slot: slotKey(c, i), pos: side === "top" || side === "bottom" ? og.cx : og.cy, i });
+    }
+  });
+  for (const list of groups.values()) {
+    const slots = new Map();
+    for (const e of list) { if (!slots.has(e.slot)) slots.set(e.slot, { pos: 0, n: 0, i: e.i }); const s = slots.get(e.slot); s.pos += e.pos; s.n++; }
+    const order = [...slots.entries()].sort((x, y) => x[1].pos / x[1].n - y[1].pos / y[1].n || x[1].i - y[1].i).map(x => x[0]);
+    const n = order.length, horiz = list[0].side === "top" || list[0].side === "bottom";
+    const sp = n > 1 ? Math.min(horiz ? 28 : 16, ((horiz ? BW : BH) - (horiz ? 36 : 20)) / (n - 1)) : 0;
+    for (const e of list) off.set(e.key, (order.indexOf(e.slot) - (n - 1) / 2) * sp);
+  }
+  return off;
+}
+// Z-shaped lines run their middle part through the gap between rows. Lines in the same gap
+// whose middle parts overlap get their own lane (same-type lines share one in "bundled" mode).
+function zLanes(conns, byId, offs) {
+  const chans = new Map(), lane = new Map();
+  conns.forEach((c, i) => {
+    const A = byId.get(c.from), B = byId.get(c.to); if (!A || !B || A === B || c.route === "L") return;
+    const a = geom(A), b = geom(B); if (Math.abs(a.cy - b.cy) < 1 || Math.abs(a.cx - b.cx) < 1) return;
+    const aUp = a.cy < b.cy, up = aUp ? a : b, lo = aUp ? b : a;
+    const ux = up.cx + (offs.get(i + (aUp ? "a" : "b")) || 0), lx = lo.cx + (offs.get(i + (aUp ? "b" : "a")) || 0);
+    const y0 = up.cy + up.h / 2, y1 = lo.cy - lo.h / 2, key = Math.round((y0 + y1) / 2);
+    if (!chans.has(key)) chans.set(key, { gap: y1 - y0, units: new Map() });
+    const u = chans.get(key).units, sk = slotKey(c, i);
+    if (!u.has(sk)) u.set(sk, { lo: Infinity, hi: -Infinity, ids: [], ups: [], downs: [] });
+    const e = u.get(sk); e.lo = Math.min(e.lo, ux, lx); e.hi = Math.max(e.hi, ux, lx); e.ids.push(i); e.ups.push(ux); e.downs.push(lx);
+  });
+  for (const [key, ch] of chans) {
+    const all = [...ch.units.values()].sort((x, y) => x.lo - y.lo), lanes = [];
+    // A line leaving the upper row at x must turn above a line arriving at the lower row at
+    // the same x, or their vertical parts would overlap: place those units in that order.
+    const above = (u, v) => u !== v && u.ups.some(x => v.downs.some(y => Math.abs(x - y) < 1));
+    const units = [], left = new Set(all);
+    while (left.size) {
+      const next = [...left].find(u => ![...left].some(v => above(v, u))) || [...left][0];
+      left.delete(next); units.push(next);
+    }
+    for (const u of units) {
+      let k = Math.max(-1, ...units.filter(v => v.k !== undefined && above(v, u)).map(v => v.k)) + 1;
+      while (lanes[k]?.some(v => u.lo <= v.hi + 2 && v.lo <= u.hi + 2)) k++;
+      (lanes[k] ||= []).push(u); u.k = k;
+    }
+    const n = lanes.length, sp = n > 1 ? Math.min(14, (ch.gap - 24) / (n - 1)) : 0;
+    for (const u of units) for (const i of u.ids) lane.set(i, key + (u.k - (n - 1) / 2) * sp);
+  }
+  return lane;
+}
+function route(c, A, B, oa = 0, ob = 0, laneY) {
+  const a = geom(A), b = geom(B), eps = 1;
+  let pts, lab, anchor = "start";
+  if (Math.abs(a.cy - b.cy) < eps) {
+    const dir = b.cx > a.cx ? 1 : -1;
+    const pa = [a.cx + dir * a.w / 2, a.cy + oa], pb = [b.cx - dir * b.w / 2, b.cy + ob], mx = (pa[0] + pb[0]) / 2;
+    pts = Math.abs(oa - ob) < 0.5 ? [pa, pb] : [pa, [mx, pa[1]], [mx, pb[1]], pb];
+    lab = [mx, Math.min(pa[1], pb[1]) - 9]; anchor = "middle";
+  } else if (Math.abs(a.cx - b.cx) < eps) {
+    const dir = b.cy > a.cy ? 1 : -1;
+    const pa = [a.cx + oa, a.cy + dir * a.h / 2], pb = [b.cx + ob, b.cy - dir * b.h / 2], my = (pa[1] + pb[1]) / 2;
+    pts = Math.abs(oa - ob) < 0.5 ? [pa, pb] : [pa, [pa[0], my], [pb[0], my], pb];
+    const low = pa[1] > pb[1] ? pa : pb;
+    lab = [low[0] + 9, low[1] - 16];
+  } else {
+    const aUp = a.cy < b.cy, up = aUp ? a : b, lo = aUp ? b : a, ou = aUp ? oa : ob, ol = aUp ? ob : oa;
+    const ux = up.cx + ou;
+    if (c.route === "L") {
+      const side = lo.cx > up.cx ? -1 : 1, ly = lo.cy + ol;
+      pts = [[ux, up.cy + up.h / 2], [ux, ly], [lo.cx + side * lo.w / 2, ly]];
+      lab = [ux + 9, (up.cy + up.h / 2 + ly) / 2 + 4];
+    } else {
+      const lx = lo.cx + ol, my = laneY ?? (up.cy + up.h / 2 + lo.cy - lo.h / 2) / 2;
+      pts = [[ux, up.cy + up.h / 2], [ux, my], [lx, my], [lx, lo.cy - lo.h / 2]];
+      lab = [lx + 9, lo.cy - lo.h / 2 - 16];
+    }
+    if (!aUp) pts.reverse();
+  }
+  return { d: "M" + pts.map(p => p.map(v => Math.round(v * 10) / 10).join(",")).join(" L"), lab, anchor };
+}
+
+/* ------------------------------------------------------------------ smart routing */
+// Orthogonal lines that go around blocks: A* search over a sparse grid built from the block edges
+// and the channels between them. Costs favour short paths with few bends, keep lines of different
+// types (or every line, in "separate" mode) off each other, and let same-type lines share a bus.
+const RT = { pad: 14, stub: 18, bend: 30, cross: 16, overlap: 600, share: 0.5, side: 70, near: 0.35 };
+const SIDE_N = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
+const DIRV = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const dirOf = (v) => v[0] > 0 ? 0 : v[0] < 0 ? 1 : v[1] > 0 ? 2 : 3;
+const r1 = (v) => Math.round(v * 10) / 10;
+function portPt(g, side, off) {
+  return side === "top" ? [g.cx + off, g.y] : side === "bottom" ? [g.cx + off, g.y + g.h]
+    : side === "left" ? [g.x, g.cy + off] : [g.x + g.w, g.cy + off];
+}
+function sidePenalty(g, side, other) {
+  const dx = other.cx - g.cx, dy = other.cy - g.cy, len = Math.hypot(dx, dy) || 1, n = SIDE_N[side];
+  return (1 - (n[0] * dx + n[1] * dy) / len) * RT.side;
+}
+function buildGrid(rects, extraX, extraY, X1, Y1) {
+  const xs = new Set(extraX.map(r1)), ys = new Set(extraY.map(r1)), ex = [], ey = [];
+  for (const r of rects) { ex.push(r.x0, r.x1); ey.push(r.y0, r.y1); }
+  const mids = (edges, set, lo, hi) => {
+    const a = [...new Set([lo, ...edges, hi].map(r1))].sort((p, q) => p - q);
+    a.forEach(v => set.add(v));
+    for (let k = 0; k < a.length - 1; k++) {
+      const gap = a[k + 1] - a[k]; if (gap < 6) continue;
+      const m = (a[k] + a[k + 1]) / 2; set.add(r1(m));
+      for (const d of [9, 18, 27]) if (gap > 2 * d + 10) { set.add(r1(m - d)); set.add(r1(m + d)); }
+    }
+  };
+  mids(ex, xs, 6, X1); mids(ey, ys, 6, Y1);
+  const X = [...xs].sort((p, q) => p - q), Y = [...ys].sort((p, q) => p - q), nx = X.length, ny = Y.length;
+  const inside = (x, y) => rects.some(r => x > r.x0 + 0.01 && x < r.x1 - 0.01 && y > r.y0 + 0.01 && y < r.y1 - 0.01);
+  const free = new Uint8Array(nx * ny), okH = new Uint8Array(nx * ny), okV = new Uint8Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) free[j * nx + i] = inside(X[i], Y[j]) ? 0 : 1;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const id = j * nx + i;
+    if (i < nx - 1) okH[id] = free[id] && free[id + 1] && !inside((X[i] + X[i + 1]) / 2, Y[j]) ? 1 : 0;
+    if (j < ny - 1) okV[id] = free[id] && free[id + nx] && !inside(X[i], (Y[j] + Y[j + 1]) / 2) ? 1 : 0;
+  }
+  const xi = new Map(X.map((v, i) => [v, i])), yi = new Map(Y.map((v, j) => [v, j]));
+  return { X, Y, nx, ny, free, okH, okV, at: (x, y) => { const i = xi.get(r1(x)), j = yi.get(r1(y)); return i === undefined || j === undefined ? -1 : j * nx + i; } };
+}
+// starts/goals: [{ node, dir, cost, side, port }]; occ: occupancy of already routed lines (or null)
+// me: { id, tags }. Lines may share a path only when they have a tag in common: the same line type
+// AND a common end block, so a shared bus always fans out from the block the lines have in common.
+function astar(G, starts, goals, me, occ) {
+  const N = G.nx * G.ny * 4, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
+  const goalAt = new Map(); for (const g of goals) if (g.node >= 0) { if (!goalAt.has(g.node)) goalAt.set(g.node, []); goalAt.get(g.node).push(g); }
+  if (!goalAt.size) return null;
+  const gpts = goals.filter(g => g.node >= 0).map(g => [G.X[g.node % G.nx], G.Y[Math.floor(g.node / G.nx)]]);
+  const h = (id) => { const x = G.X[id % G.nx], y = G.Y[Math.floor(id / G.nx)]; let m = Infinity; for (const p of gpts) m = Math.min(m, Math.abs(p[0] - x) + Math.abs(p[1] - y)); return m; };
+  const heap = []; // binary heap of [f, state]
+  const push = (f, st) => { heap.push([f, st]); let k = heap.length - 1; while (k) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  const startOf = new Map();
+  for (const s of starts) { if (s.node < 0 || !G.free[s.node]) continue; const st = s.node * 4 + s.dir; if (s.cost < dist[st]) { dist[st] = s.cost; startOf.set(st, s); push(s.cost + h(s.node), st); } }
+  let best = Infinity, bestSt = -1, bestGoal = null;
+  const occOther = (m) => { if (!m) return 0; for (const [lid, tags] of m) if (lid !== me.id && !tags.some(t => me.tags.includes(t))) return 1; return 0; };
+  const occMine = (m) => { if (!m) return 0; for (const [lid, tags] of m) if (lid !== me.id && tags.some(t => me.tags.includes(t))) return 1; return 0; };
+  while (heap.length) {
+    const [f, st] = pop(); if (f >= best) break;
+    const g = dist[st]; if (f - h(st >> 2) > g + 1e-6) continue;
+    const id = st >> 2, dir = st & 3;
+    const gl = goalAt.get(id);
+    if (gl) for (const go of gl) { const c = g + go.cost + (dir === go.dir ? 0 : RT.bend); if (c < best) { best = c; bestSt = st; bestGoal = go; } }
+    const i = id % G.nx, j = (id - i) / G.nx;
+    for (let nd = 0; nd < 4; nd++) {
+      if (nd === (dir ^ 1)) continue; // no U-turns
+      let nid, len, ek;
+      if (nd === 0) { if (i >= G.nx - 1 || !G.okH[id]) continue; nid = id + 1; len = G.X[i + 1] - G.X[i]; ek = "h" + id; }
+      else if (nd === 1) { if (i <= 0 || !G.okH[id - 1]) continue; nid = id - 1; len = G.X[i] - G.X[i - 1]; ek = "h" + (id - 1); }
+      else if (nd === 2) { if (j >= G.ny - 1 || !G.okV[id]) continue; nid = id + G.nx; len = G.Y[j + 1] - G.Y[j]; ek = "v" + id; }
+      else { if (j <= 0 || !G.okV[id - G.nx]) continue; nid = id - G.nx; len = G.Y[j] - G.Y[j - 1]; ek = "v" + (id - G.nx); }
+      let c = len;
+      if (occ) {
+        const m = occ.seg.get(ek);
+        if (occOther(m)) c += RT.overlap + len * 4;
+        else if (occMine(m)) c = len * RT.share;
+        if (occOther(occ.near.get(ek))) c += len * RT.near; // hugging another line
+        if (occOther((nd < 2 ? occ.v : occ.h).get(nid))) c += RT.cross;
+      }
+      if (nd !== dir) c += RT.bend;
+      const ns = nid * 4 + nd, ng = g + c;
+      if (ng < dist[ns]) { dist[ns] = ng; prev[ns] = st; push(ng + h(nid), ns); }
+    }
+  }
+  if (bestSt < 0) return null;
+  const nodes = []; let st = bestSt, s0 = st;
+  while (st >= 0) { nodes.push(st >> 2); s0 = st; st = prev[st]; }
+  nodes.reverse();
+  return { nodes, start: startOf.get(s0), goal: bestGoal, cost: best };
+}
+function occAdd(G, occ, nodes, me) {
+  const add = (map, k) => { if (!map.has(k)) map.set(k, new Map()); map.get(k).set(me.id, me.tags); };
+  for (let k = 0; k < nodes.length - 1; k++) {
+    const a = nodes[k], b = nodes[k + 1], lo = Math.min(a, b), horiz = Math.abs(a - b) === 1;
+    add(occ.seg, (horiz ? "h" : "v") + lo); add(horiz ? occ.h : occ.v, a); add(horiz ? occ.h : occ.v, b);
+    // the neighbouring parallel grid lines count as "near" so lines keep a little distance
+    for (const d of horiz ? [G.nx, -G.nx] : [1, -1]) { const n = lo + d; if (n >= 0 && n < G.nx * G.ny) add(occ.near, (horiz ? "h" : "v") + n); }
+  }
+}
+function simplify(pts) {
+  const out = [];
+  for (const p of pts) {
+    if (out.length && Math.abs(out[out.length - 1][0] - p[0]) < 0.05 && Math.abs(out[out.length - 1][1] - p[1]) < 0.05) continue;
+    if (out.length >= 2) { const a = out[out.length - 2], b = out[out.length - 1]; if ((Math.abs(a[0] - b[0]) < 0.05 && Math.abs(b[0] - p[0]) < 0.05) || (Math.abs(a[1] - b[1]) < 0.05 && Math.abs(b[1] - p[1]) < 0.05)) out.pop(); }
+    out.push(p);
+  }
+  return out;
+}
+function roundedD(pts, r = 8) {
+  const f = (p) => r1(p[0]) + "," + r1(p[1]);
+  let d = "M" + f(pts[0]);
+  for (let k = 1; k < pts.length - 1; k++) {
+    const a = pts[k - 1], b = pts[k], c = pts[k + 1];
+    const l1 = Math.hypot(b[0] - a[0], b[1] - a[1]), l2 = Math.hypot(c[0] - b[0], c[1] - b[1]), rr = Math.min(r, l1 / 2, l2 / 2);
+    const p1 = [b[0] + (a[0] - b[0]) / l1 * rr, b[1] + (a[1] - b[1]) / l1 * rr], p2 = [b[0] + (c[0] - b[0]) / l2 * rr, b[1] + (c[1] - b[1]) / l2 * rr];
+    d += " L" + f(p1) + " Q" + f(b) + " " + f(p2);
+  }
+  return d + " L" + f(pts[pts.length - 1]);
+}
+function labelSpot(pts) {
+  // middle of the longest inner segment (the first and last ones are short stubs at the blocks)
+  let best = null;
+  for (let k = 0; k < pts.length - 1; k++) {
+    const a = pts[k], b = pts[k + 1], len = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+    const inner = k > 0 && k < pts.length - 2, score = len * (inner || pts.length === 2 ? 1 : 0.6);
+    if (!best || score > best.score) best = { score, a, b };
+  }
+  const { a, b } = best;
+  return Math.abs(a[1] - b[1]) < 0.5 ? { lab: [(a[0] + b[0]) / 2, a[1] - 8], anchor: "middle" } : { lab: [a[0] + 8, (a[1] + b[1]) / 2 + 4], anchor: "start" };
+}
+function routeAll(conns, byId, nodes) {
+  const ck = JSON.stringify([S.lines, nodes.map(n => [n.id, n.at]), conns.map(c => [c.from, c.to, c.type])]);
+  if (S._routes?.key === ck) return S._routes.map;
+  const rects = nodes.map(n => { const g = geom(n); return { id: n.id, g, x0: g.x - RT.pad, y0: g.y - RT.pad, x1: g.x + g.w + RT.pad, y1: g.y + g.h + RT.pad }; });
+  const X1 = Math.max(...rects.map(r => r.x1)) + 24, Y1 = Math.max(...rects.map(r => r.y1)) + 24;
+  const list = [];
+  conns.forEach((c, i) => { const A = byId.get(c.from), B = byId.get(c.to); if (A && B && A !== B) list.push({ c, i, ga: geom(A), gb: geom(B), key: slotKey(c, i), aid: A.id, bid: B.id,
+    me: { id: i, tags: S.lines === "separate" ? ["c" + i] : [slotKey(c, i) + "@" + A.id, slotKey(c, i) + "@" + B.id] } }); });
+  const stub = (g, side, off) => { const p = portPt(g, side, off), n = SIDE_N[side]; return { p, q: [p[0] + n[0] * RT.stub, p[1] + n[1] * RT.stub] }; };
+  const ends = (G, e, which, sides, offs) => sides.map(side => {
+    const g = which === "a" ? e.ga : e.gb, o = which === "a" ? e.gb : e.ga, { p, q } = stub(g, side, offs ? offs[side] : 0), n = SIDE_N[side];
+    return { node: G.at(q[0], q[1]), dir: dirOf(which === "a" ? n : [-n[0], -n[1]]), cost: sidePenalty(g, side, o) + RT.stub, side, port: p, q };
+  });
+  const ALL = ["top", "bottom", "left", "right"];
+  // pass 1: choose the side of each block a line leaves from, routing every line on its own
+  let ex = [], ey = [];
+  for (const r of rects) for (const s of ALL) { const { q } = stub(r.g, s, 0); ex.push(q[0]); ey.push(q[1]); }
+  let G = buildGrid(rects, ex, ey, X1, Y1);
+  for (const e of list) {
+    const r = astar(G, ends(G, e, "a", ALL), ends(G, e, "b", ALL), e.me, null);
+    e.sa = r?.start.side; e.sb = r?.goal.side; e.cost1 = r ? r.cost : Infinity;
+  }
+  // spread the lines that share a block side over that side (same-type lines share a point in "bundled" mode)
+  const groups = new Map();
+  for (const e of list) for (const [bid, side, g, o, end] of [[e.aid, e.sa, e.ga, e.gb, "a"], [e.bid, e.sb, e.gb, e.ga, "b"]]) {
+    if (!side) continue; const k = bid + ":" + side; if (!groups.has(k)) groups.set(k, []);
+    // a line straight across to a facing block keeps its own point; only lines that turn share a bus point
+    const vert = side === "top" || side === "bottom", straight = vert ? Math.abs(o.cx - g.cx) < BW / 2 : Math.abs(o.cy - g.cy) < BH / 2;
+    groups.get(k).push({ e, end, side, slot: e.key + (straight ? "|s" + (end === "a" ? e.bid : e.aid) : "|d"), pos: vert ? o.cx : o.cy });
+  }
+  for (const gl of groups.values()) {
+    const slots = new Map(); for (const x of gl) { if (!slots.has(x.slot)) slots.set(x.slot, []); slots.get(x.slot).push(x.pos); }
+    const order = [...slots.entries()].map(([k, v]) => [k, v.reduce((a, b) => a + b, 0) / v.length]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+    const n = order.length, horiz = gl[0].side === "top" || gl[0].side === "bottom";
+    const sp = n > 1 ? Math.min(horiz ? 30 : 18, ((horiz ? BW : BH) - (horiz ? 30 : 16)) / (n - 1)) : 0;
+    for (const x of gl) x.e["off" + x.end] = (order.indexOf(x.slot) - (n - 1) / 2) * sp;
+  }
+  // a line between two facing sides becomes perfectly straight when one end is alone on its side
+  const alone = (bid, side, e) => { const gl = groups.get(bid + ":" + side) || [], mine = gl.find(x => x.e === e)?.slot; return gl.every(x => x.slot === mine); };
+  for (const e of list) {
+    if (!e.sa) continue;
+    const vert = e.sa === "top" || e.sa === "bottom", facing = SIDE_N[e.sa].every((v, k) => v === -SIDE_N[e.sb][k]);
+    if (!facing) continue;
+    const ca = vert ? e.ga.cx : e.ga.cy, cb = vert ? e.gb.cx : e.gb.cy, lim = (vert ? BW : BH) / 2 - 10;
+    if (alone(e.aid, e.sa, e) && Math.abs(cb + e.offb - ca) <= lim) e.offa = cb + e.offb - ca;
+    else if (alone(e.bid, e.sb, e) && Math.abs(ca + e.offa - cb) <= lim) e.offb = ca + e.offa - cb;
+  }
+  // pass 2: route again with fixed ports, one line at a time, keeping clear of the lines already drawn
+  ex = []; ey = [];
+  for (const e of list) if (e.sa) for (const [g, side, off] of [[e.ga, e.sa, e.offa], [e.gb, e.sb, e.offb]]) { const { q } = stub(g, side, off); ex.push(q[0]); ey.push(q[1]); }
+  G = buildGrid(rects, ex, ey, X1, Y1);
+  const occ = { seg: new Map(), h: new Map(), v: new Map(), near: new Map() }, map = new Map();
+  for (const e of [...list].sort((a, b) => a.cost1 - b.cost1)) {
+    if (!e.sa) continue;
+    const r = astar(G, ends(G, e, "a", [e.sa], { [e.sa]: e.offa }), ends(G, e, "b", [e.sb], { [e.sb]: e.offb }), e.me, occ);
+    if (!r) continue;
+    occAdd(G, occ, r.nodes, e.me); e.nodes = r.nodes;
+    const pts = simplify([r.start.port, ...r.nodes.map(id => [G.X[id % G.nx], G.Y[Math.floor(id / G.nx)]]), r.goal.port]);
+    map.set(e.i, { d: roundedD(pts), pts, ...labelSpot(pts) });
+  }
+  // junction dots where bundled lines of one type split, so a shared bus reads as a bus
+  const deg = new Map(), juncs = [];
+  for (const e of list) if (e.nodes) for (let k = 0; k < e.nodes.length; k++) {
+    const id = e.nodes[k], kk = e.key + "|" + id; if (!deg.has(kk)) deg.set(kk, { e, id, nb: new Set() });
+    if (k > 0) deg.get(kk).nb.add(e.nodes[k - 1]); if (k < e.nodes.length - 1) deg.get(kk).nb.add(e.nodes[k + 1]);
+  }
+  const use = new Map(), ek = (k, a, b) => k + "|" + Math.min(a, b) + "|" + Math.max(a, b);
+  for (const e of list) if (e.nodes) for (let k = 0; k < e.nodes.length - 1; k++) { const x = ek(e.key, e.nodes[k], e.nodes[k + 1]); use.set(x, (use.get(x) || 0) + 1); }
+  // a split point: three or more directions meet and at least one of them is a shared stretch (not a plain crossing)
+  for (const v of deg.values()) if (v.nb.size >= 3 && [...v.nb].some(n => (use.get(ek(v.e.key, v.id, n)) || 0) >= 2)) juncs.push({ x: G.X[v.id % G.nx], y: G.Y[Math.floor(v.id / G.nx)], type: v.e.c.type || "_none" });
+  map.junctions = juncs;
+  S._routes = { key: ck, map };
+  return map;
+}
+
+/* ------------------------------------------------------------------ render: diagram */
+function renderDiagram() {
+  const file = S.current, f = S.files[file], wrap = $("canvas");
+  if (f.missing) {
+    wrap.innerHTML = (file === S.root ? `<div class="empty"><strong>The model folder has no ${esc(file)} yet.</strong>
+      <span>Start a new diagram, or click <b>Upload</b> (top right) to load your .yaml files or a .zip of them.</span>`
+      : `<div class="empty"><strong>${esc(file)} does not exist yet.</strong>
+      <span>Create it with the blocks that connect to this one already placed around the edge.</span>`) + `
+<button class="btn primary" type="button" data-act="create-child">Create ${esc(file)}</button></div>`;
+    $("legend").innerHTML = ""; return;
+  }
+  const d = f.data, nodes = levelNodes(file), byId = new Map(nodes.map(n => [n.id, n]));
+  const { kinds, types } = kindsFor(file);
+  let maxX = 0, maxY = 0;
+  for (const n of nodes) { const g = geom(n); maxX = Math.max(maxX, g.x + g.w); maxY = Math.max(maxY, g.y + g.h); }
+  let W = Math.max(maxX + M + 40, 600), H = maxY + M;
+
+  const selConnIds = new Set(), selBlockIds = new Set();
+  if (S.sel?.t === "block") { selBlockIds.add(S.sel.id); d.connections.forEach(c => { if (c.from === S.sel.id || c.to === S.sel.id) { selConnIds.add(c.id); selBlockIds.add(c.from); selBlockIds.add(c.to); } }); }
+  if (S.sel?.t === "conn") { const c = d.connections.find(x => x.id === S.sel.id); if (c) { selConnIds.add(c.id); selBlockIds.add(c.from); selBlockIds.add(c.to); } }
+  const dimming = !!S.sel;
+
+  const usedTypes = [...new Set(d.connections.map(c => c.type || "_none"))];
+  let defs = "<defs>";
+  for (const t of usedTypes) {
+    const p = paint(types[t]?.color || "slate");
+    defs += `<marker id="ar-${esc(slug(t))}" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:${p.stroke}"/></marker>`;
+  }
+  defs += "</defs>";
+
+  let edges = "", labels = "";
+  const placed = []; // label boxes, nudged upward so two labels never sit on top of each other
+  const placeLabel = (x, y, text, anchor) => {
+    const w = String(text).length * 7.3 + 6, x0 = anchor === "middle" ? x - w / 2 : x;
+    for (let k = 0; k < 6; k++) {
+      const hit = placed.some(b => x0 < b.x + b.w && b.x < x0 + w && Math.abs(b.y - y) < 14);
+      if (!hit) break; y -= 15;
+    }
+    placed.push({ x: x0, y, w }); return y;
+  };
+  const routed = routeAll(d.connections, byId, nodes);
+  for (const r of routed.values()) for (const p of r.pts) { W = Math.max(W, p[0] + 24); H = Math.max(H, p[1] + 24); }
+  d.connections.forEach((c, i) => {
+    const A = byId.get(c.from), B = byId.get(c.to); if (!A || !B || A === B) return;
+    const t = types[c.type] || {}, p = paint(t.color || "slate"), r = routed.get(i) || route(c, A, B);
+    const mk = `url(#ar-${slug(c.type || "_none")})`, dir = c.direction || "forward";
+    const ms = (dir === "both" || dir === "backward") ? `marker-start="${mk}"` : "";
+    const me = (dir === "both" || dir === "forward") ? `marker-end="${mk}"` : "";
+    const cid = c.id || `#${i + 1}`;
+    const cls = ["conn", selConnIds.has(c.id) && S.sel?.t === "conn" ? "sel" : "", dimming && !selConnIds.has(c.id) ? "dim" : ""].join(" ");
+    const label = c.label !== undefined ? c.label : (c.protocol || "");
+    edges += `<g class="${cls}" data-conn="${esc(cid)}"><path class="edge" d="${r.d}" style="stroke:${p.stroke}" ${t.dashed ? 'stroke-dasharray="6 5"' : ""} ${ms} ${me}/><path class="edge-hit" d="${r.d}"/><title>${esc((A.name || A.id) + " ↔ " + (B.name || B.id))}</title></g>`;
+    if (label) r.lab[1] = placeLabel(r.lab[0], r.lab[1], label, r.anchor);
+    if (label) labels += `<text class="elabel ${dimming && !selConnIds.has(c.id) ? "dim" : ""}" x="${r.lab[0]}" y="${r.lab[1]}" text-anchor="${r.anchor}" style="fill:${p.stroke}">${esc(label)}</text>`;
+  });
+
+  for (const j of routed.junctions || []) edges += `<circle class="junction${dimming ? " dim" : ""}" cx="${j.x}" cy="${j.y}" r="4" style="fill:${paint(types[j.type]?.color || "slate").stroke}"/>`;
+
+  let blocks = "";
+  for (const n of nodes) {
+    const g = geom(n), k = kinds[n.kind] || {}, p = n.ext ? { fill: "var(--surface-2)", stroke: "var(--gray-stroke)" } : paint(k.color);
+    const cls = ["block", S.sel?.t === "block" && S.sel.id === n.id ? "sel" : "", dimming && !selBlockIds.has(n.id) ? "dim" : ""].join(" ");
+    let s = `<g class="${cls}" data-block="${esc(n.id)}" transform="translate(0,0)">`;
+    if (n.detail) s += `<rect x="${g.x + 5}" y="${g.y + 5}" width="${g.w}" height="${g.h}" rx="9" style="fill:${p.fill};stroke:${p.stroke}" stroke-width="1.5" opacity=".7"/>`;
+    s += `<rect class="box" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="9" style="fill:${p.fill};stroke:${p.stroke}" stroke-width="1.75" ${n.ext ? 'stroke-dasharray="5 4"' : ""}/>`;
+    s += `<text class="name" x="${g.cx}" y="${g.cy - 3}" text-anchor="middle">${esc(trim(n.name || n.id, 22))}</text>`;
+    const sub = n.ext ? (n.extFound ? "level above" : "not found above") : n.subtitle;
+    if (sub) s += `<text class="sub" x="${g.cx}" y="${g.cy + 16}" text-anchor="middle">${esc(trim(sub, 30))}</text>`;
+    if (k.badge && !n.ext) {
+      const bw = Math.max(24, String(k.badge).length * 8 + 12);
+      s += `<rect x="${g.x + g.w - bw / 2 - 2}" y="${g.y - 12}" width="${bw}" height="24" rx="12" style="fill:${p.stroke}"/><text class="badge-t" x="${g.x + g.w - 2}" y="${g.y + 4}" text-anchor="middle">${esc(k.badge)}</text>`;
+    }
+    if (n.detail) s += `<g class="open" data-open="${esc(n.detail)}"><rect x="${g.x + 6}" y="${g.y + g.h - 19}" width="44" height="15" rx="4" fill="transparent"/><text class="open-t" x="${g.x + 10}" y="${g.y + g.h - 8}">open ▸</text><title>Open ${esc(n.name || n.id)}</title></g>`;
+    if (S.editing) s += `<g class="handle${S.sel?.t === "block" && S.sel.id === n.id ? " show" : ""}" data-handle="${esc(n.id)}"><circle cx="${g.x + g.w}" cy="${g.cy}" r="9"/><text x="${g.x + g.w}" y="${g.cy + 4}" text-anchor="middle">+</text><title>Drag to another block to connect</title></g>`;
+    s += `<title>${esc(n.name || n.id)}${n.detail ? " (double-click to open)" : ""}</title></g>`;
+    blocks += s;
+  }
+  S._content = { W, H };
+  wrap.innerHTML = `<svg id="svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(d.title || file)} diagram">${defs}${edges}${blocks}${labels}</svg>`;
+
+  // legend: only what is used on this level
+  const usedKinds = [...new Set(nodes.filter(n => !n.ext).map(n => n.kind).filter(Boolean))];
+  let lg = usedKinds.map(k => { const p = paint(kinds[k]?.color); return `<span><i class="sw" style="background:${p.fill};border-color:${p.stroke}"></i>${esc(kinds[k]?.badge ? kinds[k].badge + " · " : "")}${esc(kinds[k]?.label || k)}</span>`; }).join("");
+  if (nodes.some(n => n.ext)) lg += `<span><i class="sw" style="background:var(--surface-2);border-color:var(--gray-stroke);border-style:dashed"></i>Level above</span>`;
+  lg += usedTypes.filter(t => t !== "_none").map(t => { const ty = types[t] || {}, p = paint(ty.color || "slate"); return `<span><i class="ln" style="border-color:${p.stroke};${ty.dashed ? "border-top-style:dashed" : ""}"></i>${esc(ty.label || t)}</span>`; }).join("");
+  $("legend").innerHTML = lg;
+  if (!S._exporting) applyView();
+}
+function trim(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+
+/* ------------------------------------------------------------------ render: interface table */
+function renderTable() {
+  const f = S.files[S.current];
+  if (f.missing) { $("iface").innerHTML = ""; $("iface-summary").textContent = ""; return; }
+  const d = f.data, nodes = new Map(levelNodes(S.current).map(n => [n.id, n])), { types } = kindsFor(S.current);
+  const nm = (id) => nodes.get(id)?.name || id;
+  const cols = ["type", "protocol", "data_format", "timing", "owner"];
+  const arrow = (c) => ({ both: "↔", backward: "←" }[c.direction] || "→");
+  let complete = 0;
+  const rows = d.connections.map((c, i) => {
+    const miss = missingFields(c); if (!miss.length) complete++;
+    const cid = c.id || `#${i + 1}`, sel = S.sel?.t === "conn" && S.sel.id === c.id;
+    const tcol = paint(types[c.type]?.color || "slate").stroke;
+    return `<tr data-conn="${esc(cid)}" class="${sel ? "sel" : ""}"><td><strong>${esc(nm(c.from))}</strong> ${arrow(c)} <strong>${esc(nm(c.to))}</strong></td>` +
+      cols.map(k => k === "type"
+        ? `<td>${c.type ? `<i class="tdot" style="background:${tcol}"></i>${esc(types[c.type]?.label || c.type)}` : `<span class="missing">not set</span>`}</td>`
+        : `<td class="mono">${isEmpty(c[k]) ? `<span class="missing">not set</span>` : esc(fmtVal(c[k]))}</td>`).join("") + `</tr>`;
+  }).join("");
+  $("iface").innerHTML = d.connections.length
+    ? `<table><thead><tr><th>Connection</th><th>Type</th><th>Protocol</th><th>Data format</th><th>Timing</th><th>Owner</th></tr></thead><tbody>${rows}</tbody></table>`
+    : `<div class="empty">No connections on this level yet.</div>`;
+  $("iface-summary").textContent = d.connections.length ? `${complete} of ${d.connections.length} fully specified` : "";
+}
+
+/* ------------------------------------------------------------------ render: side panel */
+function linksHtml(links) {
+  if (!links?.length) return "";
+  return `<div><div class="kicker">Documentation</div><ul class="list">${links.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title || l.url)}</a></li>`).join("")}</ul></div>`;
+}
+function attrsHtml(obj, hidden, req = []) {
+  const keys = [...new Set([...req, ...Object.keys(obj)])].filter(k => !hidden.has(k));
+  if (!keys.length) return "";
+  return `<dl class="attrs">${keys.map(k => `<dt>${esc(k.replace(/_/g, " "))}</dt><dd>${isEmpty(obj[k]) ? `<span class="missing">not set</span>` : esc(fmtVal(obj[k]))}</dd>`).join("")}</dl>`;
+}
+function renderDetails() {
+  const file = S.current, f = S.files[file], el = $("tabpanel");
+  if (f.missing) { el.innerHTML = `<div class="insp"><p class="hint">This level has no file yet.</p></div>`; return; }
+  const d = f.data, nodes = levelNodes(file), byId = new Map(nodes.map(n => [n.id, n])), { kinds, types } = kindsFor(file);
+  const nm = (id) => byId.get(id)?.name || id;
+  let h = "";
+  if (S.sel?.t === "block" && byId.has(S.sel.id)) {
+    const b = byId.get(S.sel.id), k = kinds[b.kind] || {};
+    const conns = d.connections.filter(c => c.from === b.id || c.to === b.id);
+    h += `<div class="kicker">${b.ext ? "Block one level up" : esc(k.label || b.kind || "Block")}</div><h3>${esc(b.name || b.id)}</h3>`;
+    if (b.subtitle && !b.ext) h += `<p class="hint">${esc(b.subtitle)}</p>`;
+    if (b.description) h += `<p>${esc(b.description)}</p>`;
+    h += attrsHtml({ id: b.id, ...b }, new Set([...BLOCK_HIDDEN, "ext", "extFound", "autoPlaced", "from"].filter(x => x !== "id")));
+    if (b.ext && b.from) h += `<p class="hint">Defined in ${esc(b.from)}. <button class="btn" type="button" data-go="${esc(b.from)}">Go there</button></p>`;
+    if (b.detail) h += `<div><button class="btn primary" type="button" data-go="${esc(b.detail)}">Open ${esc(b.name || b.id)} ▸</button></div>`;
+    else if (!b.ext && S.editing) h += `<div><button class="btn" type="button" data-act="add-detail" data-id="${esc(b.id)}">Add subsystems to this block</button></div>`;
+    if (conns.length) h += `<div><div class="kicker">Connections (${conns.length})</div><ul class="list">${conns.map(c => `<li><button type="button" data-conn="${esc(c.id)}">${esc(nm(c.from))} ${c.direction === "both" ? "↔" : "→"} ${esc(nm(c.to))} <span class="hint">${esc(c.protocol || c.type || "")}</span></button></li>`).join("")}</ul></div>`;
+    h += linksHtml(b.links);
+  } else if (S.sel?.t === "conn" && d.connections.find(c => c.id === S.sel.id)) {
+    const c = d.connections.find(x => x.id === S.sel.id), t = types[c.type] || {}, miss = missingFields(c);
+    h += `<div class="kicker">${esc(t.label || c.type || "Connection")}</div><h3>${esc(nm(c.from))} ${c.direction === "both" ? "↔" : c.direction === "backward" ? "←" : "→"} ${esc(nm(c.to))}</h3>`;
+    h += miss.length ? `<div><span class="chip warn">${miss.length} field${miss.length > 1 ? "s" : ""} to define</span></div>` : `<div><span class="chip ok">✓ fully specified</span></div>`;
+    h += attrsHtml({ id: c.id, direction: c.direction || "forward", ...c }, new Set([...CONN_HIDDEN].filter(x => x !== "id" && x !== "direction")), requiredFields());
+    if (c.realizes) {
+      const pf = parentMap()[file]?.file;
+      h += `<p class="hint">Implements <code>${esc(c.realizes)}</code> one level up${pf ? ` (${esc(pf)})` : ""}.</p>`;
+    }
+    if (c.notes) h += `<p>${esc(c.notes)}</p>`;
+    h += linksHtml(c.links);
+  } else {
+    const all = d.connections.length, done = d.connections.filter(c => !missingFields(c).length).length;
+    h += `<div class="kicker">This level${d.status ? ` · <span class="chip warn">${esc(d.status)}</span>` : ""}</div><h3>${esc(d.title || file)}</h3>`;
+    if (d.description) h += `<p>${esc(d.description)}</p>`;
+    h += attrsHtml({ file, owner: d.owner, blocks: d.blocks.length, connections: all }, new Set());
+    if (all) h += `<div><div class="kicker">Interfaces specified</div><div class="meter"><i style="width:${Math.round(done / all * 100)}%"></i></div><p class="hint">${done} of ${all} connections have ${requiredFields().join(", ")}.</p></div>`;
+    const drill = d.blocks.filter(b => b.detail);
+    if (drill.length) h += `<div><div class="kicker">Open a subsystem</div><ul class="list">${drill.map(b => `<li><button type="button" data-go="${esc(b.detail)}">${esc(b.name || b.id)} ▸</button></li>`).join("")}</ul></div>`;
+    h += linksHtml(d.links);
+  }
+  el.innerHTML = `<div class="insp">${h}</div>`;
+}
+function renderIssues(list) {
+  $("tabpanel").innerHTML = `<div class="insp"><p class="hint">Checks run over every file: unknown ids, missing files, and connections that exist one level up but are not drawn inside.</p>` +
+    (list.length ? `<div>${list.map(i => `<div class="issue"><span class="chip ${i.sev}">${i.sev === "err" ? "error" : "check"}</span><div><div>${esc(i.msg)}</div><button class="where btn" type="button" data-go="${esc(i.file)}" ${i.sel ? `data-sel-t="${i.sel.t}" data-sel-id="${esc(i.sel.id)}"` : ""}>${esc(i.file)}</button></div></div>`).join("")}</div>`
+      : `<p><span class="chip ok">✓ No problems found</span></p>`) + `</div>`;
+}
+function renderEditor() {
+  const file = S.current, f = S.files[file], el = $("tabpanel");
+  if (f.missing) { el.innerHTML = `<div class="editor"><p class="hint">This level has no file yet. Use the button in the diagram to create it.</p></div>`; return; }
+  el.innerHTML = `<div class="editor">
+    <p class="hint">The raw file behind this level. You normally don't need this: the Details forms and the diagram write here for you.</p>
+    <button class="btn primary" type="button" data-act="ym-open">Open large editor</button>
+    <textarea id="yaml" spellcheck="false" aria-label="YAML for ${esc(file)}">${esc(f.text)}</textarea>
+    <div class="row">${S.canSave ? "" : `<button class="btn" type="button" data-act="copy-yaml">Copy YAML</button>`}<span class="hint">${esc(file)}</span></div>
+    <div class="status-line ${f.error ? "err" : ""}" id="msg">${esc(f.error ? "YAML error: " + f.error : S.msg)}</div>
+  </div>`;
+}
+function renderSide(issueList) {
+  if (S.tab === "types" && !S.editing) S.tab = "details";
+  $("tab-types").hidden = !S.editing;
+  for (const t of ["details", "types", "yaml", "issues"]) $("tab-" + t).setAttribute("aria-selected", String(S.tab === t));
+  if (S.tab === "types") renderTypes(); else if (S.tab === "yaml") renderEditor(); else if (S.tab === "issues") renderIssues(issueList); else if (S.editing) renderForm(); else renderDetails();
+}
+function renderCrumbs() {
+  const chain = [S.current, ...ancestors(S.current)].reverse();
+  $("crumbs").innerHTML = chain.map((f, i) => {
+    const t = S.files[f]?.data?.title || fileLabel(f);
+    return i === chain.length - 1 ? `<span class="here">${esc(t)}</span>` : `<button type="button" data-go="${esc(f)}">${esc(t)}</button><span class="sep">›</span>`;
+  }).join("");
+  $("level-title").textContent = S.files[S.current]?.data?.title || fileLabel(S.current);
+  document.title = (S.files[S.root]?.data?.title || "Architecture") + (S.current !== S.root ? " › " + (S.files[S.current]?.data?.title || "") : "");
+}
+function renderTopbar() {
+  const list = checks();
+  const errs = list.filter(i => i.sev === "err").length, warns = list.length - errs;
+  const chip = $("issues-chip");
+  chip.className = "chip " + (errs ? "err" : warns ? "warn" : "ok");
+  chip.textContent = errs ? `${errs} error${errs > 1 ? "s" : ""}${warns ? ` · ${warns} checks` : ""}` : warns ? `${warns} check${warns > 1 ? "s" : ""} to review` : "✓ model consistent";
+  $("edit-btn").classList.toggle("on", S.editing);
+  $("edit-btn").setAttribute("aria-pressed", String(S.editing));
+  $("edit-btn").textContent = S.editing ? "Done editing" : "Edit";
+  $("undo-btn").hidden = !S.editing;
+  $("undo-btn").disabled = !S.files[S.current]?.undo?.length;
+  $("layout").classList.toggle("editing", S.editing);
+  $("canvas-hint").textContent = S.editing ? "Drag blocks to move them. Drag from a block's + to another block to connect them. Click anything to edit it." : "Click a block or line for details. Double-click a stacked block to open it.";
+  updateSaveChip(); renderPalette();
+  return list;
+}
+/* ---- large YAML editor ---- */
+function ymOpen() {
+  const f = S.files[S.current]; if (f.missing) return;
+  const m = $("ymodal"), ta = $("yaml-big");
+  try { m.style.setProperty("--ym-size", (localStorage.getItem("arch.ymSize") || 14) + "px"); if (localStorage.getItem("arch.ymWrap") === "1") m.classList.add("wrap"); } catch {}
+  m.querySelector('[data-act="ym-wrap"]').setAttribute("aria-pressed", String(m.classList.contains("wrap")));
+  m.hidden = false; document.body.classList.add("ym-open");
+  ta.value = f.text; ymSync(); ymGutter(); ymStatus(); ta.focus(); ta.setSelectionRange(0, 0); ta.scrollTop = 0;
+}
+function ymClose() { $("ymodal").hidden = true; document.body.classList.remove("ym-open"); render(); }
+function ymSync() {
+  const m = $("ymodal"); if (m.hidden) return;
+  const f = S.files[S.current], ta = $("yaml-big");
+  if (f.missing) { ymClose(); return; }
+  $("ym-title").textContent = f.data?.title || fileLabel(S.current);
+  $("ym-file").textContent = "model/" + S.current;
+  $("ym-copy").hidden = S.canSave;
+  if (document.activeElement !== ta && ta.value !== f.text) { ta.value = f.text; ymGutter(); }
+  ymStatus();
+}
+function ymGutter() {
+  const ta = $("yaml-big"), n = ta.value.split("\n").length, g = $("ym-gutter");
+  if (g.dataset.n !== String(n)) { g.textContent = Array.from({ length: n }, (_, i) => i + 1).join("\n") + "\n\n"; g.dataset.n = n; }
+  g.scrollTop = ta.scrollTop;
+}
+function ymStatus() {
+  const f = S.files[S.current], st = $("ym-status"); if (!st || $("ymodal").hidden) return;
+  st.className = "status-line" + (f.error ? " err" : "");
+  st.textContent = f.error ? (f.errLine != null ? `Line ${f.errLine + 1}: ` : "") + f.error.replace(/\s*\(\d+:\d+\)\s*$/, "") : (S.canSave ? "Valid YAML · saves automatically" : "Valid YAML · preview only, use Copy to keep changes");
+  $("ym-goto").hidden = !(f.error && f.errLine != null);
+}
+function ymGoto() {
+  const f = S.files[S.current], ta = $("yaml-big"); if (f.errLine == null) return;
+  const lines = ta.value.split("\n"); let pos = 0; for (let i = 0; i < f.errLine && i < lines.length; i++) pos += lines[i].length + 1;
+  ta.focus(); ta.setSelectionRange(pos, pos + (lines[f.errLine]?.length || 0));
+  const lh = parseFloat(getComputedStyle(ta).lineHeight) || 22; ta.scrollTop = Math.max(0, f.errLine * lh - ta.clientHeight / 3); ymGutter();
+}
+document.addEventListener("scroll", (e) => { if (e.target.id === "yaml-big") $("ym-gutter").scrollTop = e.target.scrollTop; }, true);
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-act^='ym-']"); if (!t) return;
+  const a = t.dataset.act, m = $("ymodal");
+  if (a === "ym-open") ymOpen();
+  if (a === "ym-close") ymClose();
+  if (a === "ym-goto") ymGoto();
+  if (a === "ym-wrap") { m.classList.toggle("wrap"); t.setAttribute("aria-pressed", String(m.classList.contains("wrap"))); try { localStorage.setItem("arch.ymWrap", m.classList.contains("wrap") ? "1" : "0"); } catch {} }
+  if (a === "ym-font") {
+    const cur = parseFloat(getComputedStyle(m).getPropertyValue("--ym-size")) || 14, nx = Math.min(22, Math.max(11, cur + Number(t.dataset.d)));
+    m.style.setProperty("--ym-size", nx + "px"); try { localStorage.setItem("arch.ymSize", nx); } catch {}
+    ymGutter();
+  }
+});
+function renderLineToggle() { document.querySelectorAll("[data-lines]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lines === S.lines))); }
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lines]"); if (!b) return;
+  S.lines = b.dataset.lines; try { localStorage.setItem("arch.lines", S.lines); } catch {}
+  renderLineToggle(); renderDiagram();
+});
+/* ------------------------------------------------------------------ export: PDF (via print), PNG, SVG */
+// Exports always use the light theme, no selection and no edit handles.
+function levelOrder() {
+  const out = [], seen = new Set();
+  const walk = (f) => { if (seen.has(f) || !S.files[f] || S.files[f].missing || S.files[f].error) return; seen.add(f); out.push(f);
+    for (const b of S.files[f].data?.blocks || []) if (b.detail) walk(b.detail); };
+  walk(S.root);
+  for (const f of Object.keys(S.files)) walk(f);
+  return out;
+}
+function withCleanView(file, fn) {
+  const keep = { cur: S.current, sel: S.sel, editing: S.editing }, root = document.documentElement;
+  const theme = root.getAttribute("data-theme");
+  root.setAttribute("data-theme", "light");
+  S.current = file; S.sel = null; S.editing = false; S._exporting = true;
+  try { renderDiagram(); renderTable(); return fn(); }
+  finally {
+    S._exporting = false;
+    Object.assign(S, { current: keep.cur, sel: keep.sel, editing: keep.editing });
+    if (!document.body.classList.contains("printing")) theme === null ? root.removeAttribute("data-theme") : root.setAttribute("data-theme", theme);
+    render();
+  }
+}
+function levelPath(file) { return [...ancestors(file)].reverse().concat(file).map(f => S.files[f]?.data?.title || fileLabel(f)).join(" › "); }
+function buildPrint(files) {
+  const root = document.documentElement; S._printTheme = root.getAttribute("data-theme");
+  document.body.classList.add("printing");
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  $("print-root").innerHTML = files.map(f => withCleanView(f, () => {
+    const d = S.files[f].data;
+    $("svg")?.querySelectorAll(".edge-hit, .handle").forEach(n => n.remove());
+    return `<section class="pp"><h1>${esc(d.title || fileLabel(f))}</h1><p class="pp-path">${esc(levelPath(f))} · ${esc(f)}</p>
+      ${$("canvas").innerHTML}<div class="legend">${$("legend").innerHTML}</div>
+      ${d.connections.length ? `<div class="table-wrap">${$("iface").innerHTML}</div>` : ""}
+      <p class="pp-foot">Burrowly · exported ${esc(stamp)} · ${esc($("iface-summary").textContent)}</p></section>`;
+  })).join("");
+  root.setAttribute("data-theme", "light");
+}
+function endPrint() {
+  if (!document.body.classList.contains("printing")) return;
+  document.body.classList.remove("printing"); $("print-root").innerHTML = "";
+  const t = S._printTheme, root = document.documentElement; t == null ? root.removeAttribute("data-theme") : root.setAttribute("data-theme", t);
+}
+function printLevels(files) { buildPrint(files); setTimeout(() => window.print(), 50); }
+window.addEventListener("beforeprint", () => { if (!document.body.classList.contains("printing")) buildPrint([S.current]); }); // plain Ctrl+P / Cmd+P
+window.addEventListener("afterprint", endPrint);
+
+const SVG_PROPS = ["fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linejoin", "opacity", "paint-order", "font-family", "font-size", "font-weight", "font-style"];
+function standaloneSvg() {
+  return withCleanView(S.current, () => {
+    $("svg").querySelectorAll(".edge-hit, .handle").forEach(n => n.remove());
+    const src = $("svg"), out = src.cloneNode(true), a = src.querySelectorAll("*"), b = out.querySelectorAll("*");
+    a.forEach((el, i) => {
+      const cs = getComputedStyle(el);
+      b[i].setAttribute("style", SVG_PROPS.map(k => `${k}:${cs.getPropertyValue(k)}`).join(";")); // computed, so var() is resolved
+      b[i].removeAttribute("class");
+    });
+    const [, , w, h] = src.getAttribute("viewBox").split(" ").map(Number);
+    out.setAttribute("xmlns", "http://www.w3.org/2000/svg"); out.setAttribute("width", w); out.setAttribute("height", h);
+    out.removeAttribute("role"); out.removeAttribute("id");
+    out.insertAdjacentHTML("afterbegin", `<rect width="${w}" height="${h}" fill="#ffffff"/>`);
+    return { text: '<?xml version="1.0" encoding="UTF-8"?>\n' + out.outerHTML, w, h };
+  });
+}
+function download(name, blob) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function exportImage(kind) {
+  const { text, w, h } = standaloneSvg(), base = fileLabel(S.current);
+  if (kind === "svg") return download(base + ".svg", new Blob([text], { type: "image/svg+xml" }));
+  const img = new Image(), url = URL.createObjectURL(new Blob([text], { type: "image/svg+xml" }));
+  img.onload = () => {
+    const scale = 2, c = document.createElement("canvas"); c.width = w * scale; c.height = h * scale;
+    const g = c.getContext("2d"); g.scale(scale, scale); g.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+    c.toBlob(bl => bl ? download(base + ".png", bl) : flash("PNG export failed", true), "image/png");
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); flash("PNG export failed", true); };
+  img.src = url;
+}
+function exportMenu(open) { $("export-menu").hidden = !open; $("export-btn").setAttribute("aria-expanded", String(open)); }
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#export-btn")) return exportMenu($("export-menu").hidden);
+  const it = e.target.closest("[data-export]");
+  if (!it) return exportMenu(false);
+  exportMenu(false);
+  const k = it.dataset.export;
+  if (k === "pdf-all") printLevels(levelOrder());
+  else if (k === "pdf") printLevels([S.current]);
+  else if (k === "yaml") download(S.current, new Blob([S.files[S.current].text], { type: "application/x-yaml" }));
+  else if (k === "yaml-all") download(fileLabel(S.root) + "-model.zip", zipStore(Object.keys(S.files).filter(f => !S.files[f].missing).map(f => ["model/" + f, S.files[f].text])));
+  else exportImage(k);
+});
+// Minimal .zip writer (no compression), so downloading every YAML file needs no library.
+function zipStore(entries) {
+  const crcT = zipStore.t ||= Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (b) => { let c = 0xFFFFFFFF; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const d = new Date(), dt = ((d.getFullYear() - 1980) << 9 | (d.getMonth() + 1) << 5 | d.getDate()), tm = (d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1);
+  const hdr = (size, fill) => { const b = new Uint8Array(size), v = new DataView(b.buffer); fill(v); return b; };
+  for (const [name, text] of entries) {
+    const nb = enc.encode(name), data = enc.encode(text), c = crc(data);
+    const common = (v, o) => { v.setUint16(o, 20, true); v.setUint16(o + 2, 0x0800, true); v.setUint16(o + 4, 0, true); v.setUint16(o + 6, tm, true); v.setUint16(o + 8, dt, true);
+      v.setUint32(o + 10, c, true); v.setUint32(o + 14, data.length, true); v.setUint32(o + 18, data.length, true); v.setUint16(o + 22, nb.length, true); };
+    parts.push(hdr(30, v => { v.setUint32(0, 0x04034b50, true); common(v, 4); }), nb, data);
+    central.push(hdr(46, v => { v.setUint32(0, 0x02014b50, true); v.setUint16(4, 20, true); common(v, 6); v.setUint32(42, off, true); }), nb);
+    off += 30 + nb.length + data.length;
+  }
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  const end = hdr(22, v => { v.setUint32(0, 0x06054b50, true); v.setUint16(8, entries.length, true); v.setUint16(10, entries.length, true); v.setUint32(12, cdSize, true); v.setUint32(16, off, true); });
+  return new Blob([...parts, ...central, end], { type: "application/zip" });
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("export-menu").hidden) { exportMenu(false); $("export-btn").focus(); } });
+function render() { renderLineToggle(); ymSync(); const list = renderTopbar(); renderCrumbs(); renderDiagram(); renderTable(); renderSide(list); }
+function renderLight() { ymSync(); renderTopbar(); renderCrumbs(); renderDiagram(); renderTable(); }
+
+/* ------------------------------------------------------------------ edit mode: palette */
+function extCandidates(file) {
+  const p = parentMap()[file]; if (!p) return [];
+  const pd = S.files[p.file].data, here = new Set(levelNodes(file).map(n => n.id));
+  const ids = new Set(pd.connections.filter(c => c.from === p.block || c.to === p.block).map(c => c.from === p.block ? c.to : c.from));
+  return [...ids].filter(id => !here.has(id)).map(id => resolveExternal(file, id) || { id, name: id });
+}
+function renderPalette() {
+  const el = $("palette"), f = S.files[S.current];
+  el.hidden = !S.editing || !!f?.missing;
+  if (el.hidden) return;
+  const { kinds } = kindsFor(S.current);
+  const order = [...new Set([...Object.keys(f.data.kinds), ...Object.keys(kinds)])];
+  let h = `<span>Drag onto the diagram to add:</span>` + order.map(k => {
+    const p = paint(kinds[k].color);
+    return `<span class="pal" data-pal-kind="${esc(k)}" style="background:${p.fill};border-color:${p.stroke}" title="Drag onto the diagram, or click to add">+ ${esc(kinds[k].label || k)}</span>`;
+  }).join("") + `<span class="pal" data-pal-kind="" style="background:var(--surface);border-color:var(--line)">+ Plain block</span><button class="linkbtn" type="button" data-act="open-types" style="margin-left:4px">Edit types…</button><button class="linkbtn" type="button" data-act="ym-open" style="margin-left:8px">Edit YAML…</button>`;
+  const ext = extCandidates(S.current);
+  if (ext.length) h += `<span style="margin-left:8px">From the level above:</span>` + ext.map(b => `<span class="pal" data-pal-ext="${esc(b.id)}" style="background:var(--surface-2);border-color:var(--gray-stroke);border-style:dashed">${esc(b.name || b.id)}</span>`).join("");
+  el.innerHTML = h;
+}
+
+/* ------------------------------------------------------------------ edit mode: forms */
+const BLOCK_KNOWN = new Set(["id", "name", "subtitle", "kind", "owner", "description", "at", "detail", "links"]);
+const CONN_KNOWN = new Set(["id", "from", "to", "direction", "type", "protocol", "data_format", "timing", "owner", "label", "route", "realizes", "notes", "links"]);
+const PROTOCOLS = ["MQTT", "MQTT / VDA 5050", "TCP/IP", "UDP", "HTTPS / REST", "gRPC", "WebSocket", "OPC UA", "ROS 2 (DDS)", "Zenoh", "EtherCAT", "EtherCAT (FSoE)", "PROFINET", "PROFIsafe", "Modbus TCP", "CAN", "CANopen", "RS-485", "USB", "GigE Vision", "Digital I/O", "I/O", "SQL", "24 V DC", "48 V DC"];
+const FORMATS = ["JSON", "JSON (VDA 5050 v2.0 schema)", "Protobuf", "ROS 2 msg (CDR)", "XML", "CSV", "Binary", "FlatBuffers", "Analog signal"];
+const DIRS = [["both", "↔ both ways"], ["forward", "→ from → to"], ["backward", "← to → from"]];
+function usedValues(key, extra = []) {
+  const s = new Set(extra);
+  for (const f of Object.values(S.files)) for (const x of [...(f.data?.connections || []), ...(f.data?.blocks || [])]) if (typeof x[key] === "string" && x[key]) s.add(x[key]);
+  return [...s].sort((a, b) => a.localeCompare(b));
+}
+function datalists() {
+  const dl = (id, vals) => `<datalist id="${id}">${vals.map(v => `<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+  return dl("dl-proto", usedValues("protocol", PROTOCOLS)) + dl("dl-format", usedValues("data_format", FORMATS)) + dl("dl-owner", usedValues("owner"));
+}
+function fld(label, key, val, o = {}) {
+  const miss = o.req && isEmpty(val);
+  let input;
+  if (o.options) {
+    const opts = o.options.some(([v]) => String(v) === String(val ?? "")) || isEmpty(val) ? o.options : [...o.options, [val, val]];
+    input = `<select data-f="${key}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(val ?? "") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+  } else if (o.area) input = `<textarea data-f="${key}" rows="3" placeholder="${esc(o.ph || "")}">${esc(isEmpty(val) ? "" : fmtVal(val))}</textarea>`;
+  else input = `<input data-f="${key}" value="${esc(isEmpty(val) ? "" : fmtVal(val))}" ${o.list ? `list="${o.list}"` : ""} placeholder="${esc(o.ph || "")}" ${Array.isArray(val) ? 'data-arr="1"' : ""} autocomplete="off">`;
+  return `<label class="field ${miss ? "need" : ""}"><span>${esc(label)}${o.req ? ' <span class="req" title="Required">•</span>' : ""}</span>${input}</label>`;
+}
+const linkRow = (l = {}) => `<div class="kv" data-link><input data-lk="title" value="${esc(l.title || "")}" placeholder="Title"><input data-lk="url" value="${esc(l.url || "")}" placeholder="https://…" inputmode="url"><button class="x" type="button" data-act="rm-link" aria-label="Remove link">×</button></div>`;
+const attrRow = (k = "", v = "") => `<div class="kv" data-attr data-orig="${esc(k)}" data-arr="${Array.isArray(v) ? 1 : ""}"><input data-ak="k" value="${esc(k)}" placeholder="name, e.g. qos"><input data-ak="v" value="${esc(isEmpty(v) ? "" : fmtVal(v))}" placeholder="value"><button class="x" type="button" data-act="rm-attr" aria-label="Remove attribute">×</button></div>`;
+function linksEditor(links) {
+  return `<div class="sub-h">Documentation links <button class="linkbtn" type="button" data-act="add-link">+ Add link</button></div><div class="form" style="gap:6px" data-links>${(links || []).map(l => linkRow(l)).join("")}</div>`;
+}
+function attrsEditor(obj, known) {
+  const extra = Object.keys(obj).filter(k => !known.has(k));
+  return `<div class="sub-h">Other attributes <button class="linkbtn" type="button" data-act="add-attr">+ Add attribute</button></div><div class="form" style="gap:6px" data-attrs>${extra.map(k => attrRow(k, obj[k])).join("")}</div>`;
+}
+function renderForm() {
+  const file = S.current, f = S.files[file], el = $("tabpanel");
+  if (f.missing) { el.innerHTML = `<div class="insp"><p class="hint">Create this level first (button in the diagram).</p></div>`; return; }
+  const d = f.data, nodes = levelNodes(file), byId = new Map(nodes.map(n => [n.id, n])), { kinds, types } = kindsFor(file);
+  const nm = (id) => byId.get(id)?.name || id;
+  let h = datalists();
+  const sel = S.sel;
+  if (sel?.t === "block" && byId.has(sel.id) && byId.get(sel.id).ext) {
+    const b = byId.get(sel.id);
+    h += `<div class="kicker">Block one level up</div><h3>${esc(b.name || b.id)}</h3>
+      <p class="hint">This block is defined in ${esc(b.from || "the level above")}. It is shown here so you can draw what connects to it. Edit its details there.</p>
+      <div class="form-actions">${b.from ? `<button class="btn" type="button" data-go="${esc(b.from)}">Go to ${esc(S.files[b.from]?.data?.title || b.from)}</button>` : ""}
+      <button class="btn danger" type="button" data-act="delete" data-what="external" data-id="${esc(b.id)}">Remove from this level</button></div>`;
+  } else if (sel?.t === "block" && d.blocks.find(b => b.id === sel.id)) {
+    const b = d.blocks.find(x => x.id === sel.id);
+    const conns = d.connections.filter(c => c.from === b.id || c.to === b.id);
+    const kindOpts = [["", "(none)"], ...[...new Set([...Object.keys(d.kinds), ...Object.keys(kinds)])].map(k => [k, `${kinds[k].badge ? kinds[k].badge + " · " : ""}${kinds[k].label || k}`])];
+    h += `<div class="kicker">Edit block</div>
+    <div class="form" data-scope="block" data-id="${esc(b.id)}">
+      ${fld("Name", "name", b.name, { req: true, ph: "e.g. Vision PC" })}
+      <div class="two">${fld("Subtitle", "subtitle", b.subtitle, { ph: "short note under the name" })}${fld("Kind", "kind", b.kind, { options: kindOpts })}</div>
+      ${fld("Owner", "owner", b.owner, { list: "dl-owner", ph: "team or person" })}
+      ${fld("Description", "description", b.description, { area: true, ph: "What does this block do?" })}
+      <div class="sub-h">Subsystems</div>
+      <div>${b.detail ? `<button class="btn primary" type="button" data-go="${esc(b.detail)}">Open ${esc(b.name || b.id)} ▸</button> <button class="linkbtn" type="button" data-act="unlink-detail" data-id="${esc(b.id)}">unlink</button>`
+        : `<button class="btn" type="button" data-act="add-detail" data-id="${esc(b.id)}">Add subsystems (drill-down) ▸</button>`}</div>
+      ${linksEditor(b.links)}
+      ${attrsEditor(b, BLOCK_KNOWN)}
+      ${conns.length ? `<div class="sub-h">Connections (${conns.length})</div><ul class="list">${conns.map(c => `<li><button type="button" data-conn="${esc(c.id)}">${esc(nm(c.from))} ${c.direction === "both" ? "↔" : "→"} ${esc(nm(c.to))} <span class="hint">${esc(c.protocol || c.type || "")}</span></button></li>`).join("")}</ul>` : ""}
+      <div class="form-actions"><button class="btn danger" type="button" data-act="delete" data-what="block" data-id="${esc(b.id)}">Delete block</button><span class="idline">id: ${esc(b.id)}${validAt(b.at) ? ` · at [${b.at.join(", ")}]` : ""}</span></div>
+    </div>`;
+  } else if (sel?.t === "conn" && d.connections.find(c => c.id === sel.id)) {
+    const c = d.connections.find(x => x.id === sel.id), req = new Set(requiredFields());
+    const nodeOpts = nodes.map(n => [n.id, (n.name || n.id) + (n.ext ? " (level above)" : "")]);
+    const typeOpts = [["", "(none)"], ...[...new Set([...Object.keys(d.connection_types), ...Object.keys(types)])].map(k => [k, types[k].label || k])];
+    const pm = parentMap()[file];
+    const parentConns = pm ? S.files[pm.file].data.connections.filter(x => x.from === pm.block || x.to === pm.block) : [];
+    const pnm = (id) => pm ? (S.files[pm.file].data.blocks.find(b => b.id === id)?.name || id) : id;
+    h += `<div class="kicker">Edit connection</div>
+    <div class="form" data-scope="conn" data-id="${esc(c.id)}">
+      <div class="two">${fld("From", "from", c.from, { options: nodeOpts })}${fld("To", "to", c.to, { options: nodeOpts })}</div>
+      <div class="two">${fld("Direction", "direction", c.direction || "forward", { options: DIRS })}${fld("Type", "type", c.type, { options: typeOpts, req: req.has("type") })}</div>
+      <div class="two">${fld("Protocol", "protocol", c.protocol, { list: "dl-proto", req: req.has("protocol"), ph: "e.g. EtherCAT" })}${fld("Data format", "data_format", c.data_format, { list: "dl-format", req: req.has("data_format"), ph: "e.g. JSON" })}</div>
+      <div class="two">${fld("Timing", "timing", c.timing, { req: req.has("timing"), ph: "e.g. 5 ms, 10 Hz" })}${fld("Owner", "owner", c.owner, { list: "dl-owner", req: req.has("owner"), ph: "team or person" })}</div>
+      <div class="two">${fld("Text on the line", "label", c.label, { ph: "default: protocol" })}${fld("Line shape", "route", c.route, { options: [["", "Automatic"], ["L", "L-shape"]] })}</div>
+      ${pm ? fld("Implements (level above)", "realizes", c.realizes, { options: [["", "(none)"], ...parentConns.map(x => [x.id, `${pnm(x.from)} → ${pnm(x.to)}${x.protocol ? " · " + x.protocol : ""}`])] }) : ""}
+      ${fld("Notes", "notes", c.notes, { area: true, ph: "Anything worth knowing about this interface" })}
+      ${linksEditor(c.links)}
+      ${attrsEditor(c, CONN_KNOWN)}
+      <div class="form-actions"><button class="btn danger" type="button" data-act="delete" data-what="conn" data-id="${esc(c.id)}">Delete connection</button><span class="idline">id: ${esc(c.id)}</span></div>
+    </div>`;
+  } else if (sel?.t === "conn") {
+    h += `<p class="hint">This connection has no <code>id</code>, so it can only be edited in the YAML tab.</p>`;
+  } else {
+    const colorOpts = NAMED.map(c => [c, c]);
+    h += `<div class="kicker">Edit this level</div>
+    <div class="form" data-scope="level" data-id="">
+      ${fld("Title", "title", d.title, { req: true })}
+      ${fld("Description", "description", d.description, { area: true })}
+      <div class="two">${fld("Owner", "owner", d.owner, { list: "dl-owner" })}${fld("Status", "status", d.status, { ph: "e.g. draft, example, approved" })}</div>
+      ${file === S.root ? fld("Required connection fields (comma separated)", "required_connection_fields", d.required_connection_fields || CORE_CONN_FIELDS) : ""}
+      ${linksEditor(d.links)}
+    </div>
+    <div><button class="btn" type="button" data-act="open-types">Edit block and line types…</button></div>
+    <p class="hint">Click a block or line in the diagram to edit it.</p>`;
+  }
+  el.innerHTML = `<div class="insp">${h}</div>`;
+}
+function colorSelect(val, opts) {
+  const all = opts.some(([v]) => v === val) || !val ? opts : [...opts, [val, val]];
+  return `<select data-m="color">${all.map(([v, l]) => `<option value="${esc(v)}" ${v === (val || "gray") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+}
+const COLOR_OPTS = NAMED.map(c => [c, c]);
+function usage(section, key) {
+  let n = 0;
+  for (const f of Object.values(S.files)) for (const x of (section === "kinds" ? f.data?.blocks : f.data?.connections) || []) if ((section === "kinds" ? x.kind : x.type) === key) n++;
+  return n;
+}
+const moveBtns = `<span class="mv"><button class="x" type="button" data-act="mv-map" data-dir="-1" aria-label="Move up">↑</button><button class="x" type="button" data-act="mv-map" data-dir="1" aria-label="Move down">↓</button></span>`;
+const kindRow = (k, v = {}, file = S.root) => `<div class="kv kind-row" data-map="kinds" data-file="${esc(file)}" data-orig="${esc(k)}">${moveBtns}<input data-m="label" value="${esc(v.label || "")}" placeholder="Name, e.g. Robot"><input data-m="badge" value="${esc(v.badge || "")}" placeholder="–" maxlength="3" title="Letter in the corner badge">${colorSelect(v.color, COLOR_OPTS)}<button class="x" type="button" data-act="rm-map" aria-label="Remove type">×</button></div>`;
+const typeRow = (k, v = {}, file = S.root) => `<div class="kv type-row" data-map="connection_types" data-file="${esc(file)}" data-orig="${esc(k)}">${moveBtns}<input data-m="label" value="${esc(v.label || "")}" placeholder="Name, e.g. Fieldbus">${colorSelect(v.color, COLOR_OPTS)}<label class="hint" style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-m="dashed" ${v.dashed ? "checked" : ""}>dashed</label><button class="x" type="button" data-act="rm-map" aria-label="Remove type">×</button></div>`;
+function renderTypes() {
+  const file = S.current, chain = [...ancestors(file).reverse(), file];
+  const sect = (section, title, rowFn, addAct, note) => {
+    let h = `<div class="sub-h">${title} <button class="linkbtn" type="button" data-act="${addAct}">+ Add</button></div><div class="form" style="gap:6px" data-typelist="${section}">`;
+    for (const f of chain) {
+      const m = S.files[f]?.data?.[section] || {};
+      if (!Object.keys(m).length) continue;
+      if (chain.length > 1) h += `<div class="hint">${f === S.root ? "Used on every level" : `Only on ${esc(S.files[f].data.title || f)}`}</div>`;
+      h += Object.entries(m).map(([k, v]) => rowFn(k, v, f)).join("");
+    }
+    return h + `</div><p class="hint">${note}</p>`;
+  };
+  $("tabpanel").innerHTML = `<div class="insp">
+    ${sect("kinds", "Block types", kindRow, "add-kind", "Shown as chips above the diagram, in this order. The badge is the letter in the block's corner.")}
+    ${sect("connection_types", "Line types", typeRow, "add-type", "Pick these in the Type field of a connection.")}
+    <p class="hint">Changes apply right away. Removing a type that is in use clears it from those blocks or lines.</p>
+  </div>`;
+}
+function moveMapEntry(text, section, key, dir) {
+  const lines = text.split("\n"), sec = topRange(lines, section); if (!sec) return text;
+  let ind = 2; for (let i = sec.start + 1; i < sec.end; i++) if (!isFiller(lines[i])) { ind = indentOf(lines[i]); break; }
+  const entries = [];
+  for (let i = sec.start + 1; i < sec.end; i++) {
+    const m = lines[i].match(new RegExp(`^ {${ind}}([\\w-]+)\\s*:`)); if (!m) continue;
+    const r = keyRange(lines, i, sec.end, ind, m[1]); entries.push({ key: m[1], ...r });
+  }
+  const i = entries.findIndex(e => e.key === key), j = i + dir;
+  if (i < 0 || j < 0 || j >= entries.length) return text;
+  const [a, b] = i < j ? [entries[i], entries[j]] : [entries[j], entries[i]];
+  const A = lines.slice(a.start, a.end), B = lines.slice(b.start, b.end), mid = lines.slice(a.end, b.start);
+  lines.splice(a.start, b.end - a.start, ...B, ...mid, ...A);
+  return lines.join("\n");
+}
+
+/* ------------------------------------------------------------------ YAML text editing (keeps comments and layout intact) */
+const indentOf = (l) => l.search(/\S|$/);
+const isTop = (l) => /^[A-Za-z_][\w-]*\s*:/.test(l);
+const isFiller = (l) => l.trim() === "" || l.trim().startsWith("#");
+const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const emptyVal = (v) => v === undefined || v === null || (typeof v === "string" && v.trim() === "") || (Array.isArray(v) && !v.length);
+function topRange(lines, key) {
+  const s = lines.findIndex(l => new RegExp(`^${reEsc(key)}\\s*:`).test(l)); if (s < 0) return null;
+  let e = s + 1; while (e < lines.length && !isTop(lines[e])) e++;
+  while (e > s + 1 && isFiller(lines[e - 1])) e--;
+  return { start: s, end: e };
+}
+function itemRange(lines, section, id) {
+  const sec = topRange(lines, section); if (!sec) return null;
+  const re = new RegExp(`^(\\s*)-\\s+id:\\s*["']?${reEsc(id)}["']?\\s*(#.*)?$`);
+  for (let i = sec.start + 1; i < sec.end; i++) {
+    const m = lines[i].match(re); if (!m) continue;
+    const ind = m[1].length; let e = i + 1;
+    while (e < sec.end && (isFiller(lines[e]) || indentOf(lines[e]) > ind)) e++;
+    while (e > i + 1 && isFiller(lines[e - 1])) e--;
+    return { start: i, end: e, ind, keyInd: ind + 2 };
+  }
+  return null;
+}
+function keyRange(lines, from, to, ind, key) {
+  const re = new RegExp(`^ {${ind}}${reEsc(key)}\\s*:`);
+  for (let i = from; i < to; i++) if (re.test(lines[i])) {
+    let e = i + 1;
+    while (e < to && !isFiller(lines[e]) && (indentOf(lines[e]) > ind || (indentOf(lines[e]) === ind && lines[e].trim().startsWith("- ")))) e++;
+    return { start: i, end: e };
+  }
+  return null;
+}
+function dumpKey(key, value, ind) {
+  const objs = Array.isArray(value) && value.some(v => v && typeof v === "object");
+  const flow = Array.isArray(value) ? (objs ? 2 : 1) : (value && typeof value === "object" ? 1 : -1);
+  return jsyaml.dump({ [key]: value }, { lineWidth: -1, flowLevel: flow, noRefs: true }).replace(/\n$/, "").split("\n").map(l => " ".repeat(ind) + l);
+}
+function setItemKey(text, section, id, key, value) {
+  const lines = text.split("\n"), r = itemRange(lines, section, id); if (!r) return text;
+  const k = keyRange(lines, r.start + 1, r.end, r.keyInd, key);
+  const nl = emptyVal(value) ? [] : dumpKey(key, value, r.keyInd);
+  if (k) lines.splice(k.start, k.end - k.start, ...nl); else lines.splice(r.end, 0, ...nl);
+  return lines.join("\n");
+}
+function setTopKey(text, key, value) {
+  const lines = text.split("\n"), r = topRange(lines, key);
+  const nl = emptyVal(value) ? [] : dumpKey(key, value, 0);
+  if (r) { lines.splice(r.start, r.end - r.start, ...nl); return lines.join("\n"); }
+  if (!nl.length) return text;
+  let at = lines.findIndex(l => /^(required_connection_fields|kinds|connection_types|external|blocks|connections)\s*:/.test(l));
+  if (at < 0) at = lines.length;
+  while (at > 0 && isFiller(lines[at - 1])) at--;
+  lines.splice(at, 0, ...nl); return lines.join("\n");
+}
+function setMapEntry(text, section, key, obj) {
+  const lines = text.split("\n"); let sec = topRange(lines, section);
+  if (!sec) {
+    if (!obj) return text;
+    let at = lines.findIndex(l => new RegExp(`^(${section === "kinds" ? "connection_types|" : ""}external|blocks|connections)\\s*:`).test(l));
+    if (at < 0) at = lines.length;
+    while (at > 0 && lines[at - 1].trim().startsWith("#")) at--;
+    lines.splice(at, 0, `${section}:`, ""); sec = topRange(lines, section);
+  }
+  if (/:\s*\{\}\s*$/.test(lines[sec.start])) lines[sec.start] = `${section}:`;
+  let ind = 2; for (let i = sec.start + 1; i < sec.end; i++) if (!isFiller(lines[i])) { ind = indentOf(lines[i]); break; }
+  const k = keyRange(lines, sec.start + 1, sec.end, ind, key);
+  const nl = obj ? jsyaml.dump({ [key]: obj }, { flowLevel: 1, lineWidth: -1 }).replace(/\n$/, "").split("\n").map(l => " ".repeat(ind) + l) : [];
+  if (k) lines.splice(k.start, k.end - k.start, ...nl); else lines.splice(sec.end, 0, ...nl);
+  return lines.join("\n");
+}
+function addItem(text, section, obj) {
+  const lines = text.replace(/\n*$/, "").split("\n");
+  let sec = topRange(lines, section);
+  if (!sec) { lines.push("", `${section}:`); sec = topRange(lines, section); }
+  if (/:\s*\[\]\s*$/.test(lines[sec.start])) lines[sec.start] = `${section}:`;
+  let ind = 2; for (let i = sec.start + 1; i < sec.end; i++) { const m = lines[i].match(/^(\s*)-\s/); if (m) { ind = m[1].length; break; } }
+  const out = [" ".repeat(ind) + "- id: " + obj.id];
+  for (const [k, v] of Object.entries(obj)) if (k !== "id" && !emptyVal(v)) out.push(...dumpKey(k, v, ind + 2));
+  lines.splice(sec.end, 0, ...(sec.end > sec.start + 1 ? ["", ...out] : out));
+  return lines.join("\n") + "\n";
+}
+function addExternalLine(text, id, at) {
+  const lines = text.replace(/\n*$/, "").split("\n");
+  let sec = topRange(lines, "external");
+  if (!sec) {
+    let b = lines.findIndex(l => /^(blocks|connections)\s*:/.test(l)); if (b < 0) b = lines.length;
+    while (b > 0 && lines[b - 1].trim().startsWith("#")) b--;
+    lines.splice(b, 0, "external:", ""); sec = topRange(lines, "external");
+  }
+  if (/:\s*\[\]\s*$/.test(lines[sec.start])) lines[sec.start] = "external:";
+  lines.splice(sec.end, 0, `  - { id: ${id}, at: [${fmtNum(at[0])}, ${fmtNum(at[1])}] }`);
+  return lines.join("\n") + "\n";
+}
+function removeItem(text, section, id) {
+  const lines = text.split("\n"), r = itemRange(lines, section, id);
+  if (r) { let s = r.start; if (s > 0 && lines[s - 1].trim() === "" && (r.end >= lines.length || lines[r.end].trim() === "" || indentOf(lines[r.end]) <= r.ind)) s--; lines.splice(s, r.end - s); return lines.join("\n"); }
+  const sec = topRange(lines, section); if (!sec) return text;
+  const re = new RegExp(`\\{\\s*id:\\s*["']?${reEsc(id)}["']?\\s*[,}]`);
+  for (let i = sec.start + 1; i < sec.end; i++) if (re.test(lines[i])) { lines.splice(i, 1); break; }
+  return lines.join("\n");
+}
+function renameBlock(text, oldId, newId) {
+  const lines = text.split("\n"), r = itemRange(lines, "blocks", oldId); if (!r) return text;
+  lines[r.start] = lines[r.start].replace(new RegExp(`(id:\\s*["']?)${reEsc(oldId)}`), `$1${newId}`);
+  let t = lines.join("\n");
+  const d = normalize(jsyaml.load(t));
+  for (const c of d.connections) if (c.id) {
+    if (c.from === oldId) t = setItemKey(t, "connections", c.id, "from", newId);
+    if (c.to === oldId) t = setItemKey(t, "connections", c.id, "to", newId);
+  }
+  return t;
+}
+function setAt(text, id, col, row) {
+  const val = `[${fmtNum(col)}, ${fmtNum(row)}]`, lines = text.split("\n");
+  const inl = lines.findIndex(l => new RegExp(`\\{\\s*id:\\s*["']?${reEsc(id)}["']?\\s*[,}]`).test(l));
+  if (inl >= 0) {
+    lines[inl] = /at:\s*\[[^\]]*\]/.test(lines[inl]) ? lines[inl].replace(/at:\s*\[[^\]]*\]/, `at: ${val}`) : lines[inl].replace(/\s*\}\s*$/, `, at: ${val} }`);
+    return lines.join("\n");
+  }
+  for (const sec of ["blocks", "external"]) { const t = setItemKey(text, sec, id, "at", [Math.round(col * 2) / 2, Math.round(row * 2) / 2]); if (t !== text) return t; }
+  return text;
+}
+function freeCell(nodes) {
+  const taken = new Set(nodes.map(n => n.at.join(",")));
+  for (let r = 0; r < 20; r++) for (let c = 0; c < 4; c++) if (!taken.has(`${c},${r}`)) return [c, r];
+  return [0, 20];
+}
+function uniqueId(base, nodes) { let id = base, i = 2; const ids = new Set(nodes.map(n => n.id)); while (ids.has(id)) id = `${base}-${i++}`; return id; }
+function childSkeleton(parentFile, block) {
+  const pd = S.files[parentFile].data, conns = pd.connections.filter(c => c.from === block.id || c.to === block.id);
+  const others = [...new Set(conns.map(c => c.from === block.id ? c.to : c.from))];
+  const core = `${block.id}-core`;
+  let t = `# Drill-down of "${block.name || block.id}" (id \`${block.id}\` in ${parentFile}).\n\n`;
+  t += `title: ${jsyaml.dump(block.name || block.id).trim()}\ndescription: Subsystems of ${jsyaml.dump(block.name || block.id).trim()}.\n` + (block.owner ? `owner: ${block.owner}\n` : "") + "\n";
+  t += `# Blocks from the level above that connect into this one.\nexternal:\n`;
+  others.forEach((o, i) => { t += `  - { id: ${o}, at: [${i}, 0] }\n`; });
+  if (!others.length) t = t.replace(/external:\n$/, "external: []\n");
+  t += `\nblocks:\n  - id: ${core}\n    name: ${jsyaml.dump((block.name || block.id) + " core").trim()}\n    subtitle: rename me\n    at: [${Math.max(0, Math.floor((others.length - 1) / 2))}, 1]\n\nconnections:\n`;
+  conns.forEach((c, i) => {
+    const o = c.from === block.id ? c.to : c.from, fwd = c.from === block.id;
+    if (i) t += "\n";
+    t += `  - id: ${core}-${o}\n    from: ${fwd ? core : o}\n    to: ${fwd ? o : core}\n    direction: ${c.direction || "forward"}\n`;
+    if (c.type) t += `    type: ${c.type}\n`;
+    if (c.protocol) t += `    protocol: ${jsyaml.dump(c.protocol).trim()}\n`;
+    if (c.id) t += `    realizes: ${c.id}\n`;
+  });
+  return t;
+}
+
+/* ------------------------------------------------------------------ changes: undo + autosave */
+function mutate(fn, opts = {}) {
+  const file = opts.file || S.current, f = S.files[file], before = f.text;
+  let after; try { after = fn(before); } catch (e) { flash("Could not apply that change: " + e.message, true); return false; }
+  if (after === before) return false;
+  (f.undo ||= []).push(before); if (f.undo.length > 100) f.undo.shift();
+  f.text = after; parseFile(file);
+  if (opts.full) render(); else renderLight();
+  scheduleSave(); return true;
+}
+function undo() {
+  const f = S.files[S.current]; if (!f.undo?.length) return;
+  f.text = f.undo.pop(); parseFile(S.current); render(); scheduleSave();
+}
+const dirtyFiles = () => Object.entries(S.files).filter(([, f]) => !f.missing && f.text !== f.savedText).map(([n]) => n);
+function scheduleSave() {
+  if (S.canSave) { clearTimeout(S.saveT); S.saveState = "pending"; S.saveT = setTimeout(saveAll, 600); }
+  updateSaveChip();
+}
+async function saveAll() {
+  S.saveState = "saving"; updateSaveChip();
+  try {
+    for (const name of dirtyFiles()) {
+      const f = S.files[name], text = f.text;
+      const r = await fetch("model/" + encodeURIComponent(name), { method: "PUT", body: text, headers: { "content-type": "text/yaml" } });
+      if (!r.ok) throw new Error(await r.text());
+      f.savedText = text;
+    }
+    S.saveState = dirtyFiles().length ? "pending" : "saved";
+    if (S.saveState === "pending") S.saveT = setTimeout(saveAll, 600);
+  } catch (e) { S.saveState = "error"; S.saveErr = e.message; }
+  updateSaveChip();
+}
+function updateSaveChip() {
+  const c = $("save-chip"); c.hidden = !S.editing && !(S.canSave && dirtyFiles().length);
+  if (c.hidden) return;
+  if (!S.canSave) { const d = dirtyFiles().length; c.className = "chip " + (d ? "warn" : "neutral"); c.textContent = d ? "Preview: changes are not saved" : "Preview mode"; c.title = "Run the app locally or in Docker to save changes to the YAML files."; return; }
+  const st = S.saveState || "saved";
+  c.className = "chip " + (st === "error" ? "err" : st === "saved" ? "ok" : "neutral");
+  c.textContent = st === "error" ? "Save failed" : st === "saved" ? "✓ All changes saved" : "Saving…";
+  c.title = st === "error" ? S.saveErr || "" : "Changes are written to the YAML files automatically.";
+}
+function flash(msg, err = false) { S.msg = msg; S.msgErr = err; if (!$("ymodal").hidden) { const st = $("ym-status"); st.textContent = msg; st.classList.toggle("err", err); } const m = $("msg"); if (m) { m.textContent = msg; m.classList.toggle("err", err); } if (err) { const c = $("save-chip"); c.hidden = false; c.className = "chip err"; c.textContent = msg; } }
+
+/* ------------------------------------------------------------------ actions */
+function go(file, sel) {
+  const t = S.files[file]?.data?.title; document.title = t ? `${t} · Burrowly` : "Burrowly";
+  if (!S.files[file]) S.files[file] = { text: "", savedText: "", data: normalize({}), missing: true };
+  S.current = file; S.sel = sel || null;
+  const h = "#" + fileLabel(file).replace(/[^A-Za-z0-9._~-]/g, "");
+  if (location.hash !== h && file !== S.root) history.replaceState(null, "", h);
+  if (file === S.root && location.hash) history.replaceState(null, "", location.pathname + location.search);
+  render();
+}
+function select(sel) { S.sel = sel; if (S.tab !== "details" && (S.editing || S.tab === "issues")) S.tab = "details"; render(); }
+const STARTER = `# Top level of the architecture. See docs/YAML-GUIDE.md for every field.
+title: System architecture
+
+kinds:
+  central: { label: Central, badge: C, color: blue }
+  robot: { label: Robot, badge: R, color: green }
+  local: { label: Local equipment, badge: L, color: purple }
+  other: { label: Other systems, color: gray }
+
+connection_types:
+  network: { label: Network / messaging, color: slate }
+  realtime: { label: Robot / real-time link, color: orange }
+  undefined: { label: Not yet defined, color: amber, dashed: true }
+
+required_connection_fields: [type, protocol, data_format, timing, owner]
+
+blocks:
+
+connections:
+`;
+function createChild(file) {
+  const f = S.files[file], p = parentMap()[file], pb = p && S.files[p.file].data.blocks.find(b => b.id === p.block);
+  f.text = pb ? childSkeleton(p.file, pb) : file === S.root ? STARTER : `title: ${fileLabel(file)}\n\nblocks:\n\nconnections:\n`;
+  f.savedText = ""; f.undo = []; delete f.missing; parseFile(file);
+}
+function addBlockAt(kind, at) {
+  const file = S.current, { kinds } = kindsFor(file), nodes = levelNodes(file);
+  const label = kind ? (kinds[kind]?.label || kind) : "block";
+  const id = uniqueId("new-" + slug(label), nodes);
+  if (mutate(t => addItem(t, "blocks", { id, name: `New ${label}`, kind: kind || undefined, at }), { full: false })) {
+    S.sel = { t: "block", id }; S.tab = "details"; render();
+    const inp = document.querySelector('[data-scope="block"] [data-f="name"]'); if (inp) { inp.focus(); inp.select(); }
+  }
+}
+function addConnection(from, to) {
+  const file = S.current, d = S.files[file].data, { types } = kindsFor(file);
+  const type = Object.keys(d.connection_types)[0] || Object.keys(types)[0];
+  const id = uniqueId(`${from}-${to}`, d.connections.map(c => ({ id: c.id })));
+  if (mutate(t => addItem(t, "connections", { id, from, to, direction: "both", type }))) select({ t: "conn", id });
+}
+function writeScoped(scope, id, key, value) {
+  if (scope === "block") return mutate(t => setItemKey(t, "blocks", id, key, value));
+  if (scope === "conn") return mutate(t => setItemKey(t, "connections", id, key, value));
+  if (scope === "level") return mutate(t => setTopKey(t, key, value));
+}
+function writeLinks(form) {
+  const links = [...form.querySelectorAll(":scope > [data-links] > [data-link], [data-links] [data-link]")]
+    .map(r => ({ title: r.querySelector('[data-lk="title"]').value.trim(), url: r.querySelector('[data-lk="url"]').value.trim() }))
+    .filter(l => l.url || l.title).map(l => l.title ? l : { url: l.url });
+  writeScoped(form.dataset.scope, form.dataset.id, "links", links);
+}
+function writeMapRow(row) {
+  const get = (m) => row.querySelector(`[data-m="${m}"]`);
+  const label = get("label").value.trim(), section = row.dataset.map, file = row.dataset.file || S.root;
+  let key = row.dataset.orig;
+  if (!key) {
+    if (!label) return;
+    const { kinds, types } = kindsFor(S.current), taken = new Set(Object.keys(section === "kinds" ? kinds : types));
+    key = slug(label); let i = 2; while (taken.has(key)) key = `${slug(label)}-${i++}`;
+  }
+  const obj = { label: label || key };
+  if (get("badge")?.value.trim()) obj.badge = get("badge").value.trim();
+  obj.color = get("color").value;
+  if (get("dashed")?.checked) obj.dashed = true;
+  mutate(t => setMapEntry(t, section, key, obj), { file });
+  row.dataset.orig = key;
+  renderPalette();
+}
+
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.closest("[data-map]")) { writeMapRow(el.closest("[data-map]")); return; }
+  const form = el.closest(".form[data-scope]"); if (!form || !S.editing) return;
+  const scope = form.dataset.scope, id = form.dataset.id;
+  if (el.dataset.f) {
+    const key = el.dataset.f;
+    let v = el.value;
+    if (el.dataset.arr || key === "required_connection_fields") v = v.split(",").map(x => x.trim()).filter(Boolean);
+    if (scope === "block" && key === "name" && /^new-/.test(id) && String(v).trim()) {
+      const nid = uniqueId(slug(v), levelNodes(S.current).filter(n => n.id !== id));
+      if (mutate(t => renameBlock(setItemKey(t, "blocks", id, "name", v), id, nid))) { S.sel = { t: "block", id: nid }; form.dataset.id = nid; form.querySelectorAll("[data-id]").forEach(x => x.dataset.id = nid); const idl = form.querySelector(".idline"); if (idl) idl.textContent = idl.textContent.replace(id, nid); }
+      return;
+    }
+    if (writeScoped(scope, id, key, v) && ["from", "to", "type", "kind", "realizes"].includes(key)) renderSide(checks());
+    if (["protocol", "data_format", "timing", "owner", "type", "name"].includes(key)) el.closest(".field")?.classList.toggle("need", !!el.closest(".field")?.querySelector(".req") && !String(v).trim());
+    return;
+  }
+  if (el.closest("[data-link]")) { writeLinks(form); return; }
+  if (el.closest("[data-attr]")) {
+    const row = el.closest("[data-attr]"), k = row.querySelector('[data-ak="k"]').value.trim(), raw = row.querySelector('[data-ak="v"]').value, orig = row.dataset.orig;
+    if (!k) return;
+    if ((scope === "block" ? BLOCK_KNOWN : CONN_KNOWN).has(k) && k !== orig) { flash(`"${k}" already has its own field above.`, true); return; }
+    const v = row.dataset.arr ? raw.split(",").map(x => x.trim()).filter(Boolean) : raw.trim();
+    const sec = scope === "block" ? "blocks" : "connections";
+    mutate(t => { if (orig && orig !== k) t = setItemKey(t, sec, id, orig, undefined); return setItemKey(t, sec, id, k, emptyVal(v) ? "" : v); });
+    if (!emptyVal(v)) row.dataset.orig = k;
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go],[data-act],[data-conn],[role=tab],#edit-btn,#issues-chip,#undo-btn,[data-open]");
+  if (!t) return;
+  if (t.id === "edit-btn") { S.editing = !S.editing; if (S.tab === "yaml" && !S.editing) S.tab = "details"; if (S.editing) S.tab = "details"; render(); return; }
+  if (t.id === "undo-btn") { undo(); return; }
+  if (t.id === "issues-chip") { S.tab = "issues"; render(); return; }
+  if (t.getAttribute("role") === "tab") { S.tab = t.id.replace("tab-", ""); render(); return; }
+  if (t.dataset.open) { e.stopPropagation(); go(t.dataset.open); return; }
+  if (t.dataset.go) { go(t.dataset.go, t.dataset.selT ? { t: t.dataset.selT, id: t.dataset.selId } : null); if (t.dataset.selT) { S.tab = "details"; render(); } return; }
+  if (t.dataset.conn && !t.closest("svg")) { select({ t: "conn", id: t.dataset.conn }); return; }
+  const act = t.dataset.act, file = S.current, f = S.files[file], form = t.closest(".form[data-scope]");
+  if (act === "copy-yaml") {
+    navigator.clipboard.writeText(f.text).then(() => flash(`Copied. Paste it into model/${file}.`), () => { const ta = $("ymodal").hidden ? $("yaml") : $("yaml-big"); ta.focus(); ta.select(); flash("Text selected; press Ctrl+C / Cmd+C to copy."); });
+  }
+  if (act === "create-child") { createChild(file); S.editing = true; S.tab = "details"; render(); scheduleSave(); }
+  if (act === "add-detail") {
+    const id = t.dataset.id; let child = `${slug(id)}.yaml`, i = 2;
+    while (S.files[child] && !S.files[child].missing) child = `${slug(id)}-${i++}.yaml`;
+    if (mutate(tx => setItemKey(tx, "blocks", id, "detail", child))) {
+      S.files[child] = { text: "", savedText: "", data: normalize({}), missing: true };
+      createChild(child); scheduleSave(); go(child);
+    }
+  }
+  if (act === "unlink-detail") { mutate(tx => setItemKey(tx, "blocks", t.dataset.id, "detail", undefined), { full: true }); }
+  if (act === "add-link") { const box = form.querySelector("[data-links]"); box.insertAdjacentHTML("beforeend", linkRow()); box.lastElementChild.querySelector("input").focus(); }
+  if (act === "rm-link") { t.closest("[data-link]").remove(); writeLinks(form); }
+  if (act === "add-attr") { const box = form.querySelector("[data-attrs]"); box.insertAdjacentHTML("beforeend", attrRow()); box.lastElementChild.querySelector("input").focus(); }
+  if (act === "rm-attr") {
+    const row = t.closest("[data-attr]"), orig = row.dataset.orig; row.remove();
+    if (orig) mutate(tx => setItemKey(tx, form.dataset.scope === "block" ? "blocks" : "connections", form.dataset.id, orig, undefined));
+  }
+  if (act === "open-types") { S.tab = "types"; render(); }
+  if (act === "add-kind" || act === "add-type") {
+    const sec = act === "add-kind" ? "kinds" : "connection_types", list = document.querySelector(`[data-typelist="${sec}"]`);
+    list.insertAdjacentHTML("beforeend", act === "add-kind" ? kindRow("", { color: "teal" }) : typeRow("", { color: "slate" }));
+    list.lastElementChild.querySelector('[data-m="label"]').focus();
+  }
+  if (act === "mv-map") {
+    const row = t.closest("[data-map]"); if (!row.dataset.orig) return;
+    mutate(tx => moveMapEntry(tx, row.dataset.map, row.dataset.orig, Number(t.dataset.dir)), { file: row.dataset.file, full: true });
+  }
+  if (act === "rm-map") {
+    const row = t.closest("[data-map]"), key = row.dataset.orig, sec = row.dataset.map;
+    if (!key) { row.remove(); return; }
+    const n = usage(sec, key);
+    if (n && !t.classList.contains("armed")) { t.classList.add("armed"); t.title = `Used ${n}×. Click again to remove.`; t.textContent = `used ${n}× · remove?`; t.style.fontSize = "11px"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = "×"; t.style.fontSize = ""; } }, 3000); return; }
+    // clear the type from every block or line that uses it, then remove it
+    for (const [name, f2] of Object.entries(S.files)) {
+      if (f2.missing) continue;
+      const items = sec === "kinds" ? f2.data.blocks.filter(b => b.kind === key) : f2.data.connections.filter(c => c.type === key && c.id);
+      if (items.length) mutate(tx => items.reduce((acc, it) => setItemKey(acc, sec === "kinds" ? "blocks" : "connections", it.id, sec === "kinds" ? "kind" : "type", undefined), tx), { file: name });
+    }
+    mutate(tx => setMapEntry(tx, sec, key, null), { file: row.dataset.file, full: true });
+  }
+  if (act === "delete") {
+    if (!t.classList.contains("armed")) { t.classList.add("armed"); t.dataset.txt = t.textContent; t.textContent = "Click again to delete"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = t.dataset.txt; } }, 3000); return; }
+    const id = t.dataset.id, what = t.dataset.what;
+    if (what === "conn") mutate(tx => removeItem(tx, "connections", id));
+    if (what === "external" || what === "block") {
+      const conns = f.data.connections.filter(c => (c.from === id || c.to === id) && c.id).map(c => c.id);
+      mutate(tx => { tx = removeItem(tx, what === "block" ? "blocks" : "external", id); for (const cid of conns) tx = removeItem(tx, "connections", cid); return tx; });
+    }
+    S.sel = null; render();
+  }
+});
+
+document.addEventListener("focusin", (e) => { if (e.target.id === "yaml" || e.target.id === "yaml-big") { const f = S.files[S.current]; (f.undo ||= []).push(f.text); } });
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "yaml" && e.target.id !== "yaml-big") return;
+  const file = S.current, f = S.files[file]; f.text = e.target.value;
+  if (e.target.id === "yaml-big") ymGutter();
+  clearTimeout(S._t);
+  S._t = setTimeout(() => {
+    parseFile(file); renderLight();
+    const m = $("msg"); if (m) { m.textContent = f.error ? "YAML error: " + f.error : "Diagram updated."; m.classList.toggle("err", !!f.error); }
+    ymStatus();
+    if (!f.error) scheduleSave();
+  }, 300);
+});
+document.addEventListener("keydown", (e) => {
+  if (!$("ymodal").hidden) {
+    if (e.key === "Escape") { e.preventDefault(); ymClose(); return; }
+    if (e.key === "Tab" && e.target.id === "yaml-big") {
+      e.preventDefault();
+      const ta = e.target, a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+      const ls = v.lastIndexOf("\n", a - 1) + 1;
+      if (a === b && !e.shiftKey) { ta.setRangeText("  ", a, b, "end"); }
+      else {
+        const le = v.indexOf("\n", b - 1) < 0 ? v.length : v.indexOf("\n", b - (b > a && v[b - 1] === "\n" ? 1 : 0));
+        const block = v.slice(ls, le), out = block.split("\n").map(l => e.shiftKey ? l.replace(/^ {1,2}/, "") : "  " + l).join("\n");
+        ta.setRangeText(out, ls, le, "select");
+      }
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+  }
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (S.canSave) saveAll(); }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z" && S.editing && !typing) { e.preventDefault(); undo(); }
+  if (e.key === "Escape" && S.sel && !typing) { S.sel = null; render(); }
+});
+window.addEventListener("hashchange", () => {
+  const want = location.hash.slice(1); const file = Object.keys(S.files).find(f => fileLabel(f) === want) || S.root;
+  if (file !== S.current) go(file);
+});
+
+/* ------------------------------------------------------------------ diagram pointer handling */
+const canvas = $("canvas");
+function svgPoint(e) {
+  const svg = $("svg"); if (!svg) return null;
+  const r = svg.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return null;
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+const snap = (p) => [Math.max(0, Math.round((p.x - M - BW / 2) / PX * 2) / 2), Math.max(0, Math.round((p.y - M - BH / 2) / PY * 2) / 2)];
+let drag = null;
+canvas.addEventListener("pointerdown", (e) => {
+  if (!S.editing || e.button > 0) return;
+  const h = e.target.closest("[data-handle]");
+  if (h) {
+    e.preventDefault();
+    const n = levelNodes(S.current).find(x => x.id === h.dataset.handle), g = geom(n);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("class", "tmpline"); line.setAttribute("x1", g.x + g.w); line.setAttribute("y1", g.cy); line.setAttribute("x2", g.x + g.w); line.setAttribute("y2", g.cy);
+    $("svg").appendChild(line);
+    drag = { kind: "connect", from: n.id, line };
+    canvas.setPointerCapture(e.pointerId); return;
+  }
+  const g = e.target.closest("[data-block]"); if (!g || e.target.closest("[data-open]")) return;
+  const p = svgPoint(e); if (!p) return;
+  drag = { kind: "move", id: g.dataset.block, g, x0: p.x, y0: p.y, moved: false };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const svg = $("svg"), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+  if (drag.kind === "connect") { drag.line.setAttribute("x2", p.x); drag.line.setAttribute("y2", p.y); return; }
+  const dx = p.x - drag.x0, dy = p.y - drag.y0;
+  if (Math.hypot(dx, dy) > 4) drag.moved = true;
+  if (drag.moved) { drag.g.setAttribute("transform", `translate(${dx},${dy})`); drag.dx = dx; drag.dy = dy; }
+});
+canvas.addEventListener("pointerup", (e) => {
+  if (!drag) return; const d = drag; drag = null;
+  if (d.kind === "connect") {
+    d.line.remove(); S._suppress = Date.now();
+    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-block]");
+    if (target && target.dataset.block !== d.from) addConnection(d.from, target.dataset.block);
+    else flash("Drop the line on another block to connect them.");
+    return;
+  }
+  S._suppress = Date.now(); // pointer capture retargets the click, so handle it here
+  if (!d.moved) { blockClick(d.id); return; }
+  const n = levelNodes(S.current).find(x => x.id === d.id); if (!n) return;
+  const col = Math.max(0, Math.round((n.at[0] + d.dx / PX) * 2) / 2), row = Math.max(0, Math.round((n.at[1] + d.dy / PY) * 2) / 2);
+  S.sel = { t: "block", id: d.id };
+  if (!mutate(t => setAt(t, d.id, col, row), { full: true })) render();
+});
+let lastClick = { id: null, t: 0 };
+canvas.addEventListener("click", (e) => {
+  if (S._suppress && Date.now() - S._suppress < 300) return;
+  if (e.target.closest("[data-open],[data-act],[data-handle]")) return;
+  const b = e.target.closest("[data-block]"), c = e.target.closest("[data-conn]");
+  if (b) { blockClick(b.dataset.block); return; }
+  lastClick = { id: null, t: 0 };
+  select(c ? { t: "conn", id: c.dataset.conn } : null);
+});
+function blockClick(id) {
+  // the diagram re-renders on every click, so detect double-clicks ourselves
+  if (lastClick.id === id && Date.now() - lastClick.t < 400) { lastClick = { id: null, t: 0 }; drillInto(id); return; }
+  lastClick = { id, t: Date.now() };
+  select({ t: "block", id });
+}
+function drillInto(id) {
+  const n = levelNodes(S.current).find(x => x.id === id);
+  if (n?.detail) go(n.detail);
+  else if (n?.ext && n.from) go(n.from, { t: "block", id: n.id });
+}
+
+/* ------------------------------------------------------------------ zoom, pan, expand */
+// View per level: { z, cx, cy } (zoom and centre in diagram units); no entry = fit to window.
+S.view = {};
+const ZMIN = 0.2, ZMAX = 4;
+function cvSize() { const el = $("canvas"); return [Math.max(1, el.clientWidth), Math.max(1, el.clientHeight)]; }
+function fitView() {
+  const [cw, ch] = cvSize(), { W, H } = S._content || { W: 1, H: 1 };
+  return { z: Math.max(ZMIN, Math.min(cw / W, ch / H, 1)), cx: W / 2, cy: H / 2 };
+}
+function curView() { return S.view[S.current] || fitView(); }
+function applyView() {
+  const svg = $("svg"); if (!svg || !S._content) return;
+  const [cw, ch] = cvSize(), v = curView(), { W, H } = S._content;
+  v.cx = Math.min(W, Math.max(0, v.cx)); v.cy = Math.min(H, Math.max(0, v.cy));
+  const vw = cw / v.z, vh = ch / v.z;
+  svg.setAttribute("viewBox", [v.cx - vw / 2, v.cy - vh / 2, vw, vh].map(n => Math.round(n * 100) / 100).join(" "));
+  $("zoom-pct").textContent = Math.round(v.z * 100) + "%";
+}
+function setView(v) { S.view[S.current] = v; applyView(); }
+function zoomAt(factor, clientX, clientY) {
+  const v = { ...curView() }, r = $("canvas").getBoundingClientRect(), [cw, ch] = cvSize();
+  const ox = clientX === undefined ? cw / 2 : clientX - r.left, oy = clientY === undefined ? ch / 2 : clientY - r.top;
+  const px = v.cx - cw / 2 / v.z + ox / v.z, py = v.cy - ch / 2 / v.z + oy / v.z; // diagram point under the cursor
+  const z = Math.min(ZMAX, Math.max(ZMIN, v.z * factor));
+  setView({ z, cx: px - ox / z + cw / 2 / z, cy: py - oy / z + ch / 2 / z });
+}
+function panBy(dx, dy) { const v = { ...curView() }; setView({ ...v, cx: v.cx - dx / v.z, cy: v.cy - dy / v.z }); }
+function setMax(on) {
+  S.max = on; document.body.classList.toggle("cv-max", on);
+  $("max-btn").setAttribute("aria-pressed", String(on)); $("max-btn").textContent = on ? "✕ Close" : "⤢ Expand";
+  document.documentElement.style.setProperty("--tb-h", document.querySelector(".topbar").offsetHeight + "px");
+  delete S.view[S.current]; applyView();
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-zoom]"); if (!b) return;
+  const k = b.dataset.zoom;
+  if (k === "in") zoomAt(1.25); else if (k === "out") zoomAt(1 / 1.25);
+  else if (k === "100") setView({ ...curView(), z: 1 });
+  else if (k === "fit") { delete S.view[S.current]; applyView(); }
+  else if (k === "max") setMax(!S.max);
+});
+new ResizeObserver(() => { if (S.max) document.documentElement.style.setProperty("--tb-h", document.querySelector(".topbar").offsetHeight + "px"); applyView(); }).observe($("canvas"));
+$("canvas").addEventListener("wheel", (e) => {
+  if (!$("svg")) return;
+  const k = e.deltaMode ? 20 : 1;
+  if (e.ctrlKey || e.metaKey) {                   // Ctrl/⌘ + scroll, or a trackpad pinch (arrives as ctrl + wheel)
+    e.preventDefault(); zoomAt(Math.exp(-e.deltaY * k * 0.0025), e.clientX, e.clientY);
+  } else if (S.max) {                             // expanded: scrolling pans the diagram
+    e.preventDefault(); panBy(-(e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX) * k, -(e.shiftKey && !e.deltaX ? 0 : e.deltaY) * k);
+  }
+}, { passive: false });
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest?.("input, textarea, select, [contenteditable]") || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === "Escape" && S.max && $("export-menu").hidden) { setMax(false); return; }
+  if (!$("svg")) return;
+  if (e.key === "+" || e.key === "=") zoomAt(1.25);
+  else if (e.key === "-" || e.key === "_") zoomAt(1 / 1.25);
+  else if (e.key === "0") { delete S.view[S.current]; applyView(); }
+  else if (e.key === "f" || e.key === "F") setMax(!S.max);
+  else return;
+  e.preventDefault();
+});
+// Pan by dragging empty space (mouse, pen or one finger); pinch with two fingers.
+const touches = new Map(); let pan = null, pinch = null;
+$("canvas").addEventListener("pointerdown", (e) => {
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2) {                         // second finger: switch to pinch zoom
+    if (drag) { drag.line?.remove(); drag.g?.removeAttribute("transform"); drag = null; }
+    const [a, b] = [...touches.values()]; pan = null;
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; return;
+  }
+  const empty = !e.target.closest("[data-block],[data-conn],[data-handle],[data-open],.zoombar");
+  if ((e.button === 0 && empty) || e.button === 1) {
+    if (e.button === 1) e.preventDefault();
+    pan = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
+  }
+}, true);
+$("canvas").addEventListener("pointermove", (e) => {
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && touches.size >= 2) {
+    const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    panBy(mx - pinch.mx, my - pinch.my); zoomAt(d / pinch.d, mx, my); pinch = { d, mx, my }; return;
+  }
+  if (!pan || e.pointerId !== pan.id) return;
+  const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+  if (!pan.moved && Math.hypot(dx, dy) < 4) return;
+  if (!pan.moved) { pan.moved = true; $("canvas").classList.add("panning"); try { $("canvas").setPointerCapture(e.pointerId); } catch {} }
+  panBy(dx, dy); pan.x = e.clientX; pan.y = e.clientY;
+});
+const endPointer = (e) => {
+  touches.delete(e.pointerId); if (touches.size < 2) pinch = null;
+  if (pan && e.pointerId === pan.id) { if (pan.moved) { S._suppress = Date.now(); setTimeout(() => { S._suppress = 0; }, 0); } /* swallow only the click this drag produces */ pan = null; $("canvas").classList.remove("panning"); }
+};
+$("canvas").addEventListener("pointerup", endPointer);
+$("canvas").addEventListener("pointercancel", endPointer);
+
+/* ------------------------------------------------------------------ details panel: collapse + resize */
+const SIDE_MIN = 260, SIDE_MAX = 760;
+function sideWidth(w) {
+  w = Math.round(Math.min(SIDE_MAX, Math.max(SIDE_MIN, Math.min(w, window.innerWidth * 0.6))));
+  document.documentElement.style.setProperty("--side-w", w + "px"); return w;
+}
+function setSideMin(on) {
+  document.body.classList.toggle("side-min", on);
+  try { localStorage.setItem("arch.sideMin", on ? "1" : "0"); } catch {}
+}
+try {
+  const w = Number(localStorage.getItem("arch.sideW")); if (w) sideWidth(w);
+  if (localStorage.getItem("arch.sideMin") === "1") document.body.classList.add("side-min");
+} catch {}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-side='toggle']")) setSideMin(!document.body.classList.contains("side-min")); });
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest?.("input, textarea, select, [contenteditable]") || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === "d" || e.key === "D") { e.preventDefault(); setSideMin(!document.body.classList.contains("side-min")); }
+});
+let sideDrag = null;
+$("side-resize").addEventListener("pointerdown", (e) => {
+  e.preventDefault(); $("side-resize").setPointerCapture(e.pointerId);
+  sideDrag = { x: e.clientX, w: $("side").getBoundingClientRect().width }; document.body.classList.add("side-resizing");
+});
+$("side-resize").addEventListener("pointermove", (e) => { if (sideDrag) sideWidth(sideDrag.w + sideDrag.x - e.clientX); });
+const endSide = () => {
+  if (!sideDrag) return; sideDrag = null; document.body.classList.remove("side-resizing");
+  try { localStorage.setItem("arch.sideW", parseInt(getComputedStyle(document.documentElement).getPropertyValue("--side-w")) || 400); } catch {}
+};
+$("side-resize").addEventListener("pointerup", endSide);
+$("side-resize").addEventListener("pointercancel", endSide);
+$("side-resize").addEventListener("dblclick", () => { document.documentElement.style.removeProperty("--side-w"); try { localStorage.removeItem("arch.sideW"); } catch {} });
+
+/* ------------------------------------------------------------------ upload: .yaml files or a .zip of them */
+async function unzipYaml(buf) {
+  const v = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder();
+  let eo = -1; for (let k = buf.byteLength - 22; k >= Math.max(0, buf.byteLength - 65557); k--) if (v.getUint32(k, true) === 0x06054b50) { eo = k; break; }
+  if (eo < 0) throw new Error("not a valid .zip file");
+  const n = v.getUint16(eo + 10, true); let p = v.getUint32(eo + 16, true); const out = [];
+  for (let k = 0; k < n; k++) {
+    if (v.getUint32(p, true) !== 0x02014b50) throw new Error("damaged .zip file");
+    const method = v.getUint16(p + 10, true), csize = v.getUint32(p + 20, true), nlen = v.getUint16(p + 28, true);
+    const xlen = v.getUint16(p + 30, true), clen = v.getUint16(p + 32, true), lo = v.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nlen)); p += 46 + nlen + xlen + clen;
+    const base = name.split("/").pop();
+    if (!/\.ya?ml$/i.test(base) || name.startsWith("__MACOSX/") || base.startsWith(".")) continue;
+    const start = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true), raw = u8.subarray(start, start + csize);
+    let data;
+    if (method === 0) data = raw;
+    else if (method === 8 && typeof DecompressionStream === "function") data = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+    else throw new Error(`"${name}" uses a compression this browser cannot read`);
+    out.push([base, dec.decode(data)]);
+  }
+  return out;
+}
+function toast(msg, err = false) {
+  let t = $("toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+  t.className = "toast" + (err ? " err" : ""); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, err ? 9000 : 5000);
+}
+async function importFiles(fileList) {
+  let entries = [];
+  try {
+    for (const file of fileList) {
+      if (/\.zip$/i.test(file.name) || file.type.includes("zip")) entries.push(...await unzipYaml(await file.arrayBuffer()));
+      else if (/\.ya?ml$/i.test(file.name)) entries.push([file.name, await file.text()]);
+      else throw new Error(`"${file.name}" is not a .yaml or .zip file`);
+    }
+  } catch (e) { toast("Upload failed: " + e.message, true); return; }
+  const ok = [], bad = [];
+  for (const [rawName, text] of entries) {
+    const name = rawName.replace(/\.yml$/i, ".yaml").replace(/[^\w.-]/g, "-").replace(/^[.-]+/, "");
+    try { const d = jsyaml.load(text); if (d !== null && typeof d !== "object") throw new Error("not a YAML mapping"); ok.push([name, text]); }
+    catch (e) { bad.push(`${rawName}: ${e.message.split("\n")[0]}`); }
+  }
+  if (!ok.length) { toast(bad.length ? "Nothing uploaded. " + bad.join("; ") : "No .yaml files found in the upload.", true); return; }
+  const replaced = ok.filter(([n]) => S.files[n] && !S.files[n].missing).map(([n]) => n), added = ok.filter(([n]) => !replaced.includes(n)).map(([n]) => n);
+  const msg = [replaced.length && `Replace ${replaced.length} file(s): ${replaced.join(", ")}`, added.length && `Add ${added.length} new file(s): ${added.join(", ")}`,
+    bad.length && `Skip ${bad.length} file(s) that do not parse:\n  ${bad.join("\n  ")}`].filter(Boolean).join("\n\n");
+  if (replaced.length && !confirm(msg + (S.canSave ? "\n\nReplaced files can be restored with Undo (Ctrl+Z) on their level." : ""))) return;
+  for (const [name, text] of ok) {
+    const f = S.files[name];
+    if (f && !f.missing) { if (f.text === text) continue; (f.undo ||= []).push(f.text); f.text = text; }
+    else S.files[name] = { text, savedText: "", undo: [] };
+    parseFile(name);
+  }
+  S._routes = null; scheduleSave();
+  go(ok.length === 1 ? ok[0][0] : (S.files[S.current] && !S.files[S.current].missing ? S.current : S.root));
+  toast(`Uploaded ${ok.length} file(s)${bad.length ? `, skipped ${bad.length} that did not parse` : ""}.` + (added.length && !parentMap()[added[0]] && added[0] !== S.root ? ` Link a new level from a block with "detail: ${added[0]}".` : ""), bad.length > 0);
+}
+$("upload-btn").addEventListener("click", () => $("upload-input").click());
+$("upload-input").addEventListener("change", (e) => { const fl = [...e.target.files]; e.target.value = ""; if (fl.length) importFiles(fl); });
+let dragDepth = 0;
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+window.addEventListener("dragenter", (e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; document.body.classList.add("dropping"); });
+window.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener("dragleave", (e) => { if (!hasFiles(e)) return; if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dropping"); } });
+window.addEventListener("drop", (e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; document.body.classList.remove("dropping"); importFiles([...e.dataTransfer.files]); });
+
+/* palette: drag a chip onto the diagram (pointer events, so it works with touch too) */
+let pal = null;
+$("palette").addEventListener("pointerdown", (e) => {
+  const chip = e.target.closest(".pal"); if (!chip) return;
+  e.preventDefault();
+  pal = { kind: chip.dataset.palKind, ext: chip.dataset.palExt, x0: e.clientX, y0: e.clientY, moved: false, ghost: null };
+  document.body.style.cursor = "grabbing";
+});
+window.addEventListener("pointermove", (e) => {
+  if (!pal) return;
+  if (Math.hypot(e.clientX - pal.x0, e.clientY - pal.y0) > 5) pal.moved = true;
+  const p = svgPoint(e), svg = $("svg");
+  if (!p) { pal.ghost?.remove(); pal.ghost = null; return; }
+  const g = geom({ at: snap(p) });
+  if (!pal.ghost) { pal.ghost = document.createElementNS("http://www.w3.org/2000/svg", "rect"); pal.ghost.setAttribute("class", "drop-ghost"); pal.ghost.setAttribute("rx", 9); svg.appendChild(pal.ghost); }
+  for (const [k, v] of Object.entries({ x: g.x, y: g.y, width: g.w, height: g.h })) pal.ghost.setAttribute(k, v);
+});
+window.addEventListener("pointerup", (e) => {
+  if (!pal) return; const d = pal; pal = null; document.body.style.cursor = "";
+  d.ghost?.remove();
+  const p = svgPoint(e);
+  const at = d.moved ? (p ? snap(p) : null) : freeCell(levelNodes(S.current));
+  if (!at) return;
+  if (d.ext !== undefined) { if (mutate(t => addExternalLine(t, d.ext, at))) select({ t: "block", id: d.ext }); }
+  else addBlockAt(d.kind, at);
+});
+
+/* ------------------------------------------------------------------ loading */
+async function loadAll() {
+  const bundle = document.getElementById("model-bundle");
+  if (bundle) {
+    S.embedded = true;
+    const files = JSON.parse(bundle.textContent);
+    for (const [name, text] of Object.entries(files)) { S.files[name] = { text, savedText: text }; parseFile(name); }
+  } else {
+    try { const r = await fetch("api/ping"); S.canSave = r.ok && (await r.json()).canSave === true; } catch { S.canSave = false; }
+    const queue = [S.root], seen = new Set();
+    while (queue.length) {
+      const name = queue.shift(); if (seen.has(name)) continue; seen.add(name);
+      try {
+        const r = await fetch("model/" + encodeURIComponent(name), { cache: "no-store" });
+        if (r.status === 404 && name === S.root) { S.files[name] = { text: "", savedText: "", data: normalize({}), missing: true }; continue; } // empty model/: offer to create it
+        if (!r.ok) throw new Error(r.status);
+        const text = await r.text(); S.files[name] = { text, savedText: text }; parseFile(name);
+        for (const b of S.files[name].data.blocks) if (b.detail) queue.push(b.detail);
+      } catch {
+        if (name === S.root) { document.body.innerHTML = `<div class="empty"><strong>Could not load model/${esc(S.root)}.</strong><span>Start the viewer with <code>node tools/serve.mjs</code> from the Burrowly folder and open the address it prints.</span></div>`; return false; }
+        S.files[name] = { text: "", savedText: "", data: normalize({}), missing: true };
+      }
+    }
+  }
+  for (const f of Object.values(S.files)) for (const b of f.data?.blocks || []) if (b.detail && !S.files[b.detail]) S.files[b.detail] = { text: "", savedText: "", data: normalize({}), missing: true };
+  return true;
+}
+window.addEventListener("beforeunload", (e) => { if (S.canSave && Object.values(S.files).some(f => f.text !== f.savedText)) { e.preventDefault(); e.returnValue = ""; } });
+loadAll().then(ok => {
+  if (!ok) return;
+  const want = location.hash.slice(1);
+  go(Object.keys(S.files).find(f => fileLabel(f) === want) || S.root);
+});
+</script>
+</body>
+</html>

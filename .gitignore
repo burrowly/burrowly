@@ -1,0 +1,6 @@
+dist/
+node_modules/
+model/*.yaml
+model/*.yml
+model-backup*/
+*.zip

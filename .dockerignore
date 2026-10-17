@@ -1,0 +1,11 @@
+dist/
+node_modules/
+.git/
+*.md
+*.png
+*.pdf
+*.zip
+model-backup*/
+Dockerfile
+compose.yaml
+.dockerignore

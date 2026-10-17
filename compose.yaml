@@ -1,0 +1,16 @@
+# docker compose up -d   ->  http://localhost:4321
+services:
+  burrowly:
+    build: .
+    image: burrowly:latest
+    ports:
+      - "4321:4321"
+    volumes:
+      # Your YAML lives on the host, so saves from the browser show up in `git diff`.
+      - ./model:/app/model
+    # Run as your own user so saved files keep your ownership.
+    # On Linux: UID=$(id -u) GID=$(id -g) docker compose up -d
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      READ_ONLY: "0"          # set to "1" for a shared, view-only deployment
+    restart: unless-stopped
