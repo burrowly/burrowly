@@ -140,7 +140,7 @@
     }
 
     const sf = files[FILE];
-    const result = { streams: [], issues, carries: new Map(), flow: new Map(), present: !!(sf && !sf.missing), prefix, canon, nameOf };
+    const result = { streams: [], issues, carries: new Map(), flow: new Map(), present: !!(sf && !sf.missing), prefix, canon, nameOf, hop, resolvePath };
     if (!result.present) return result;
     if (sf.error) { add("err", "YAML error: " + sf.error); return result; }
     const data = sf.data || normalizeStreams({});

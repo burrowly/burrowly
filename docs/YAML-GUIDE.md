@@ -450,6 +450,13 @@ streams:
 
 ### In the viewer
 
+- **Add a stream** (Streams tab) starts tracing: click the block where the data starts, then each
+  next block. Blocks with a dashed ring are connected to the last step; other clicks are refused
+  with the reason. Clicking a block with subsystems opens it so you can pick the block inside; use
+  **Use ... as a whole** in the bar above the diagram to add the block itself instead. **Done** (or Esc) stops.
+- In an open stream you can rename it, type a duration per step, remove a step (×), continue
+  tracing, or delete it. When two connections join the same blocks, a list under that step picks
+  which one the data uses (written as `via:`).
 - **Streams** tab: every stream with its total duration. Click one to see its steps: each block,
   the protocol / data format / timing of the connection in between, each step's duration and the
   total. Steps without a duration are counted, so you see what is missing.

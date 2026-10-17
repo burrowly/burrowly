@@ -131,6 +131,15 @@ body.cv-max .side > .panel { flex: 0 1 auto; min-height: 0; overflow: auto; }
 .conn:hover .edge, .conn.sel .edge { stroke-width: 3.5; }
 .elabel { font: 500 12px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
 .dim { opacity: .22; }
+.issue .chip { align-self: start; }
+.trace-bar { display: inline-flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; color: var(--ink); }
+.trace-bar .btn { padding: 2px 10px; font-size: 12px; }
+.next-ring { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.steps input, .steps select, .stream-card input.sname { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); padding: 2px 5px; }
+.steps input { width: 70px; text-align: right; }
+.steps select { max-width: 100%; }
+.steps .x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; }
+.stream-card input.sname { width: 100%; font-size: 14px; font-weight: 600; }
 .flow { fill: none; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 2 12; pointer-events: none; }
 @media (prefers-reduced-motion: no-preference) { .flow { animation: flow .9s linear infinite; } .flow.rev { animation-direction: reverse; } }
 @keyframes flow { to { stroke-dashoffset: -14; } }
@@ -923,7 +932,16 @@ function renderDiagram() {
   if (S.sel?.t === "block") { selBlockIds.add(S.sel.id); d.connections.forEach(c => { if (c.from === S.sel.id || c.to === S.sel.id) { selConnIds.add(c.id); selBlockIds.add(c.from); selBlockIds.add(c.to); } }); }
   if (S.sel?.t === "conn") { const c = d.connections.find(x => x.id === S.sel.id); if (c) { selConnIds.add(c.id); selBlockIds.add(c.from); selBlockIds.add(c.to); } }
   // Streams tab: highlight the chosen stream's blocks and connections on this level
-  const hl = S.tab === "streams" && !S._exporting ? streamsOf().streams.find(x => x.id === S.stream) : null;
+  const hl = S._exporting ? null : S.trace ? streamsOf().streams.find(x => x.id === S.trace) : S.tab === "streams" ? streamsOf().streams.find(x => x.id === S.stream) : null;
+  // while tracing: blocks the next step can go to (or open), marked with a dashed ring
+  const nextIds = new Set();
+  if (S.trace && hl) {
+    const tr = rawStream(S.trace), last = tr?.path.length ? tr.path[tr.path.length - 1].block : null;
+    for (const n of nodes) {
+      const p = blockPath(file, n.id); if (!p) continue;
+      if ((n.detail && !n.ext) || !last || (!within(p, last) && !within(last, p) && streamsOf().hop(last, p).good.length)) nextIds.add(n.id);
+    }
+  }
   const hlBlocks = new Map(), hlConns = new Map();
   if (hl) {
     const flow = streamsOf().flow;
@@ -978,7 +996,7 @@ function renderDiagram() {
   let blocks = "";
   for (const n of nodes) {
     const g = geom(n), k = kinds[n.kind] || {}, p = n.ext ? { fill: "var(--surface-2)", stroke: "var(--gray-stroke)" } : paint(k.color);
-    const cls = ["block", S.sel?.t === "block" && S.sel.id === n.id ? "sel" : "", dimming && !(hl ? hlBlocks.has(n.id) : selBlockIds.has(n.id)) ? "dim" : ""].join(" ");
+    const cls = ["block", S.sel?.t === "block" && S.sel.id === n.id ? "sel" : "", dimming && !(hl ? hlBlocks.has(n.id) || nextIds.has(n.id) : selBlockIds.has(n.id)) ? "dim" : ""].join(" ");
     let s = `<g class="${cls}" data-block="${esc(n.id)}" transform="translate(0,0)">`;
     if (n.detail) s += `<rect x="${g.x + 5}" y="${g.y + 5}" width="${g.w}" height="${g.h}" rx="9" style="fill:${p.fill};stroke:${p.stroke}" stroke-width="1.5" opacity=".7"/>`;
     s += `<rect class="box" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="9" style="fill:${p.fill};stroke:${p.stroke}" stroke-width="1.75" ${n.ext ? 'stroke-dasharray="5 4"' : ""}/>`;
@@ -989,6 +1007,7 @@ function renderDiagram() {
       const bw = Math.max(24, String(k.badge).length * 8 + 12);
       s += `<rect x="${g.x + g.w - bw / 2 - 2}" y="${g.y - 12}" width="${bw}" height="24" rx="12" style="fill:${p.stroke}"/><text class="badge-t" x="${g.x + g.w - 2}" y="${g.y + 4}" text-anchor="middle">${esc(k.badge)}</text>`;
     }
+    if (nextIds.has(n.id) && !hlBlocks.has(n.id)) s += `<rect class="next-ring" x="${g.x - 5}" y="${g.y - 5}" width="${g.w + 10}" height="${g.h + 10}" rx="13"/>`;
     if (hlBlocks.has(n.id)) {
       const num = hlBlocks.get(n.id), bw = Math.max(22, num.length * 8 + 10), inside = n.detail && hl.steps.some(x => x.path && x.path.startsWith(blockPath(file, n.id) + "/"));
       s += `<rect class="hl-ring" x="${g.x - 4}" y="${g.y - 4}" width="${g.w + 8}" height="${g.h + 8}" rx="12" style="stroke:${streamColor(hl.id)}"/>`;
@@ -1114,6 +1133,9 @@ function renderStreams(issueList) {
     if (open) {
       const r = st.raw, df = [].concat(r.derived_from ?? []).map(String);
       const feeds = R.streams.filter(x => [].concat(x.raw.derived_from ?? []).map(String).includes(st.id));
+      // editable here when the stream is written as "- id: ..." on its own line (the usual form)
+      const ed = !!r.id && !sf.error && !!itemRange(sf.text.split("\n"), "streams", r.id), sid = esc(st.id);
+      if (ed) c += `<input class="sname" data-sname="${sid}" value="${esc(r.name || "")}" placeholder="Name of this stream" aria-label="Stream name">`;
       if (r.description) c += `<p>${esc(r.description)}</p>`;
       c += attrsHtml({ id: st.id, ...r }, STREAM_HIDDEN);
       c += `<table class="steps"><tbody>`;
@@ -1123,17 +1145,21 @@ function renderStreams(issueList) {
           const info = (c) => [c.protocol, c.data_format, c.timing].filter(v => !isEmpty(v)).map(fmtVal).join(" · ");
           const g = x.hop?.carried?.find(k => info(k.c)) || x.hop?.best?.[0], cc = g?.c;
           const hopTxt = cc ? info(cc) || "connection details not set" : "no route";
-          c += `<tr class="hop"><td></td><td colspan="2">↓ ${cc ? `<button type="button" data-go="${esc(g.file)}" data-sel-t="conn" data-sel-id="${esc(cc.id || "")}">${esc(hopTxt)}</button>` : `<span class="missing">${esc(hopTxt)}</span>`}</td></tr>`;
+          const opts = viaOptions(x.hop), cur = x.entry.via ? String(x.entry.via) : "";
+          const pick = ed && (opts.length > 1 || (cur && opts.length)) ? `<div><select data-via="${sid}" data-i="${x.i}" aria-label="Connection used for step ${x.i + 1}">${cur ? "" : `<option value="">Choose a connection…</option>`}${opts.map(o => `<option value="${esc(o.c.id)}" ${o.c.id === cur ? "selected" : ""}>${esc(o.c.id)}${o.c.protocol ? " · " + esc(fmtVal(o.c.protocol)) : ""}${o.c.type ? " (" + esc(o.c.type) + ")" : ""}</option>`).join("")}</select></div>` : "";
+          c += `<tr class="hop"><td></td><td colspan="2">↓ ${cc ? `<button type="button" data-go="${esc(g.file)}" data-sel-t="conn" data-sel-id="${esc(cc.id || "")}">${esc(hopTxt)}</button>` : `<span class="missing">${esc(hopTxt)}</span>`}${pick}</td></tr>`;
         }
         const where = x.file ? x.file : "", lvl = where ? (S.files[where]?.data?.title || fileLabel(where)) : "";
         c += `<tr><td class="n">${x.i + 1}</td><td>${x.ok ? `<button type="button" data-go="${esc(where)}">${esc(x.name)}</button><div class="hint">${esc(lvl)}</div>` : `<span class="missing">${esc(x.ref || "?")}</span>`}${x.entry.note ? `<div class="hint">${esc(x.entry.note)}</div>` : ""}</td>` +
-          `<td class="dur">${x.ms !== null ? esc(BurrowlyStreams.fmtDuration(x.ms)) : isEmpty(x.duration) ? `<span class="missing">–</span>` : `<span class="missing">${esc(x.duration)}</span>`}</td></tr>`;
+          (ed ? `<td class="dur"><input data-dur="${sid}" data-i="${x.i}" value="${esc(isEmpty(x.duration) ? "" : x.duration)}" placeholder="time" title="Duration, e.g. 5 ms" aria-label="Duration of step ${x.i + 1}"${x.ms === null && !isEmpty(x.duration) ? ' style="border-color:var(--err)"' : ""}><button class="x" type="button" data-act="step-rm" data-id="${sid}" data-i="${x.i}" title="Remove this step" aria-label="Remove step ${x.i + 1}">×</button></td></tr>`
+            : `<td class="dur">${x.ms !== null ? esc(BurrowlyStreams.fmtDuration(x.ms)) : isEmpty(x.duration) ? `<span class="missing">–</span>` : `<span class="missing">${esc(x.duration)}</span>`}</td></tr>`);
       }
       c += `<tr class="total"><td></td><td>Total${st.unknown ? `<div class="hint">${st.unknown} of ${st.steps.length} steps have no duration</div>` : ""}</td><td class="dur">${st.steps.length - st.unknown ? esc(BurrowlyStreams.fmtDuration(st.totalMs)) : "–"}</td></tr></tbody></table>`;
       if (df.length) c += `<div><div class="kicker">Made from</div>${streamBtns(df.map(id => R.streams.find(x => x.id === id)).filter(Boolean))}</div>`;
       if (feeds.length) c += `<div><div class="kicker">Used to make</div>${streamBtns(feeds)}</div>`;
       if (list.length) c += `<div>${list.map(i => `<div class="issue"><span class="chip ${i.sev}">${i.sev === "err" ? "error" : "check"}</span><div>${esc(i.msg.replace(/^Stream "[^"]*": /, ""))}</div></div>`).join("")}</div>`;
       c += linksHtml(r.links);
+      if (ed) c += `<div class="row"><button class="btn${st.steps.length ? "" : " primary"}" type="button" data-act="trace-start" data-id="${sid}">${st.steps.length ? "Add steps by clicking" : "Pick blocks on the diagram"}</button><button class="btn danger" type="button" data-act="stream-del" data-id="${sid}">Delete stream</button></div>`;
     }
     return c + `</div>`;
   }).join("");
@@ -1179,7 +1205,14 @@ function renderTopbar() {
   $("undo-btn").hidden = !S.editing;
   $("undo-btn").disabled = !S.files[S.current]?.undo?.length;
   $("layout").classList.toggle("editing", S.editing);
-  $("canvas-hint").textContent = S.editing ? "Drag blocks to move them. Drag from a block's + to another block to connect them. Click anything to edit it." : "Click a block or line for details. Double-click a stacked block to open it.";
+  const tr = S.trace && rawStream(S.trace);
+  if (S.trace && !tr) S.trace = null;
+  if (tr) {
+    const last = tr.path.length ? tr.path[tr.path.length - 1].block : null, whole = S.traceWhole && streamsOf().nameOf(S.traceWhole);
+    $("canvas-hint").innerHTML = `<span class="trace-bar"><b>Tracing “${esc(tr.name || tr.id)}”</b> ${last ? `Click the block the data goes to after <b>${esc(streamsOf().nameOf(last))}</b>. Blocks with a dashed ring are connected to it.` : "Click the block where the data starts."} A block with subsystems opens; pick the block inside it.
+      ${whole ? `<button class="btn" type="button" data-act="trace-whole">Use ${esc(whole)} as a whole</button>` : ""}
+      ${tr.path.length ? `<button class="btn" type="button" data-act="trace-undo">Undo last step</button>` : ""}<button class="btn primary" type="button" data-act="trace-done">Done</button></span>`;
+  } else $("canvas-hint").textContent = S.editing ? "Drag blocks to move them. Drag from a block's + to another block to connect them. Click anything to edit it." : "Click a block or line for details. Double-click a stacked block to open it.";
   updateSaveChip(); renderPalette();
   return list;
 }
@@ -1762,20 +1795,52 @@ streams:
 `;
 function newStream() {
   if (!S.files[STREAMS] || S.files[STREAMS].missing) { S.files[STREAMS] = { text: STREAMS_STARTER, savedText: "", undo: [] }; parseFile(STREAMS); }
-  const file = S.current, d = S.files[file].data;
-  // start from a connection on this level so the new stream is valid straight away
-  let path;
-  for (const c of d.connections || []) {
-    const a = blockPath(file, c.from), b = blockPath(file, c.to); if (!a || !b) continue;
-    path = (c.direction === "backward" ? [b, a] : [a, b]).map(block => ({ block, duration: "" })); break;
-  }
   const taken = new Set((S.files[STREAMS].data.streams || []).map(x => x.id));
   let n = taken.size + 1; while (taken.has(`stream-${n}`)) n++;
   const id = `stream-${n}`;
-  const obj = { id, name: "New stream", path: path ? path.map(p => ({ block: p.block })) : undefined };
-  mutate(t => addItem(t, "streams", obj), { file: STREAMS, full: true });
-  S.stream = id; S.tab = "streams"; render(); ymOpen(STREAMS);
-  const ta = $("yaml-big"), at = ta.value.indexOf(`id: ${id}`); if (at >= 0) { ta.setSelectionRange(at, at); const lh = parseFloat(getComputedStyle(ta).lineHeight) || 22; ta.scrollTop = Math.max(0, ta.value.slice(0, at).split("\n").length * lh - ta.clientHeight / 3); ymGutter(); }
+  mutate(t => addItem(t, "streams", { id, name: "New stream" }), { file: STREAMS });
+  S.stream = id; S.trace = id; S.tab = "streams"; S.sel = null; render();
+}
+/* ---- editing streams from the Streams tab (writes model/streams.yaml) ---- */
+const rawStream = (id) => S.files[STREAMS]?.data?.streams?.find(x => x.id === id);
+// path entries: a plain path when it is only a block, an object when it carries duration, via, ...
+const pathYaml = (entries) => entries.map(e => { const o = Object.fromEntries(Object.entries(e).filter(([, v]) => !emptyVal(v))); return Object.keys(o).length === 1 ? o.block : o; });
+function setStreamKey(id, key, value) {
+  const ok = mutate(t => setItemKey(t, "streams", id, key, value), { file: STREAMS, full: true });
+  if (!ok && S.files[STREAMS]?.text && !itemRange(S.files[STREAMS].text.split("\n"), "streams", id)) toast(`Could not edit stream "${id}" here: write it as "- id: ${id}" on its own line in ${STREAMS}, or edit it in the YAML editor.`, true);
+  return ok;
+}
+const setStreamPath = (id, entries) => setStreamKey(id, "path", pathYaml(entries));
+function traceAdd(p) {
+  const st = rawStream(S.trace); if (!st) { S.trace = null; render(); return; }
+  const R = streamsOf(), last = st.path.length ? st.path[st.path.length - 1].block : null, name = R.nameOf(p);
+  const entry = { block: p };
+  if (last) {
+    if (within(p, last) || within(last, p)) { toast(p === last ? `"${name}" is already the last step.` : `"${name}" and "${R.nameOf(last)}" are inside each other; pick the inner block only.`, true); return; }
+    const h = R.hop(last, p);
+    if (!h.good.length) { toast(h.wrong.length ? `The connection from "${R.nameOf(last)}" to "${name}" points the other way. Change its direction first.` : `There is no connection from "${R.nameOf(last)}" to "${name}".`, true); return; }
+    const opts = viaOptions(h);
+    if (opts.length > 1) { entry.via = opts[0].c.id; toast(`${opts.length} connections join "${R.nameOf(last)}" and "${name}". Using "${opts[0].c.id}"; pick another under that step in the Streams tab.`); }
+  }
+  setStreamPath(S.trace, [...st.path, entry]);
+}
+// connections a step can choose between: the most detailed ones on one level
+function viaOptions(h) {
+  if (!h?.good?.length) return [];
+  const top = Math.max(...h.good.map(g => g.score)), best = h.good.filter(g => g.score === top && g.c.id);
+  const file = best[0]?.file; return best.filter(g => g.file === file);
+}
+// A new stream gets a readable id from its first real name ("stream-3" -> "depth-images")
+function renameStream(id, name) {
+  if (!setStreamKey(id, "name", name) || !/^stream-\d+$/.test(id) || !name) return;
+  const taken = new Set(S.files[STREAMS].data.streams.map(x => x.id)); let nid = slug(name), i = 2; while (taken.has(nid)) nid = `${slug(name)}-${i++}`;
+  mutate(t => { const lines = t.split("\n"), r = itemRange(lines, "streams", id); if (!r) return t; lines[r.start] = lines[r.start].replace(/(id:\s*)\S+/, `$1${nid}`); return lines.join("\n"); }, { file: STREAMS, full: true });
+  if (S.stream === id) S.stream = nid; if (S.trace === id) S.trace = nid; render();
+}
+function traceClick(id) {
+  const n = levelNodes(S.current).find(x => x.id === id), p = blockPath(S.current, id); if (!n || !p) return;
+  if (n.detail && !n.ext && S.files[n.detail] && !S.files[n.detail].missing) { S.traceWhole = p; go(n.detail); return; }
+  S.traceWhole = null; traceAdd(p);
 }
 // After a block id changes, point every stream step at the new id (also steps inside it).
 function renameInStreams(oldPath, newPath) {
@@ -1841,6 +1906,13 @@ function writeMapRow(row) {
 
 document.addEventListener("change", (e) => {
   const el = e.target;
+  if (el.dataset.sname !== undefined) { renameStream(el.dataset.sname, el.value.trim()); return; }
+  if (el.dataset.dur !== undefined || el.dataset.via !== undefined) {
+    const id = el.dataset.dur ?? el.dataset.via, st = rawStream(id); if (!st) return;
+    const entries = st.path.map(x => ({ ...x })), i = Number(el.dataset.i);
+    entries[i][el.dataset.dur !== undefined ? "duration" : "via"] = el.value.trim();
+    setStreamPath(id, entries); return;
+  }
   if (el.closest("[data-map]")) { writeMapRow(el.closest("[data-map]")); return; }
   const form = el.closest(".form[data-scope]"); if (!form || !S.editing) return;
   const scope = form.dataset.scope, id = form.dataset.id;
@@ -1908,6 +1980,18 @@ document.addEventListener("click", (e) => {
   if (act === "open-types") { S.tab = "types"; render(); }
   if (act === "streams-yaml") ymOpen(STREAMS);
   if (act === "new-stream") newStream();
+  if (act === "trace-start") { S.trace = t.dataset.id; S.stream = t.dataset.id; S.traceWhole = null; S.sel = null;
+    const st = streamsOf().streams.find(x => x.id === S.trace), last = st?.steps[st.steps.length - 1];
+    if (last?.ok) { const pf = last.file; go(pf); } else render(); }
+  if (act === "trace-done") { S.trace = null; S.traceWhole = null; render(); }
+  if (act === "trace-whole") { const p = S.traceWhole; S.traceWhole = null; const pf = parentMap()[S.current]?.file; if (pf) go(pf); traceAdd(p); }
+  if (act === "trace-undo") { const st = rawStream(S.trace); if (st?.path.length) setStreamPath(S.trace, st.path.slice(0, -1)); }
+  if (act === "step-rm") { const st = rawStream(t.dataset.id); if (st) setStreamPath(t.dataset.id, st.path.filter((_, i) => i !== Number(t.dataset.i))); }
+  if (act === "stream-del") {
+    if (!t.classList.contains("armed")) { t.classList.add("armed"); t.textContent = "Click again to delete"; setTimeout(() => { if (t.isConnected) { t.classList.remove("armed"); t.textContent = "Delete stream"; } }, 3000); return; }
+    if (S.trace === t.dataset.id) S.trace = null;
+    mutate(tx => removeItem(tx, "streams", t.dataset.id), { file: STREAMS, full: true }); S.stream = null; render();
+  }
   if (act === "add-kind" || act === "add-type") {
     const sec = act === "add-kind" ? "kinds" : "connection_types", list = document.querySelector(`[data-typelist="${sec}"]`);
     list.insertAdjacentHTML("beforeend", act === "add-kind" ? kindRow("", { color: "teal" }) : typeRow("", { color: "slate" }));
@@ -1976,6 +2060,7 @@ document.addEventListener("keydown", (e) => {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (S.canSave) saveAll(); }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z" && S.editing && !typing) { e.preventDefault(); undo(); }
+  if (e.key === "Escape" && S.trace && !typing) { S.trace = null; S.traceWhole = null; render(); return; }
   if (e.key === "Escape" && S.sel && !typing) { S.sel = null; render(); }
 });
 window.addEventListener("hashchange", () => {
@@ -2045,6 +2130,7 @@ canvas.addEventListener("click", (e) => {
   select(c ? { t: "conn", id: c.dataset.conn } : null);
 });
 function blockClick(id) {
+  if (S.trace) { traceClick(id); return; }
   // the diagram re-renders on every click, so detect double-clicks ourselves
   if (lastClick.id === id && Date.now() - lastClick.t < 400) { lastClick = { id: null, t: 0 }; drillInto(id); return; }
   lastClick = { id, t: Date.now() };
