@@ -1,0 +1,226 @@
+title: Burrow HQ
+description: The control server in the main chamber. Every service runs as a container on one rugged PC.
+owner: hq-team
+status: example
+
+external:
+  - { id: foreman-app,   at: [0, 0] }
+  - { id: weather,       at: [3, 0] }
+  - { id: digger-molly,  at: [0, 3] }
+  - { id: digger-max,    at: [1, 3] }
+  - { id: soil-conveyor, at: [2, 3] }
+  - { id: tunnel-mesh,   at: [3, 3] }
+  - { id: charging-den,  at: [4, 2] }
+
+kinds:
+  service: { label: Service,  badge: Sv, color: blue }
+  store:   { label: Database, badge: DB, color: slate }
+
+blocks:
+  - id: foreman-api
+    name: Foreman API
+    kind: service
+    at: [1, 0]
+    runtime: Node.js container
+
+  - id: tunnel-planner
+    name: Tunnel Planner
+    kind: service
+    at: [2, 0]
+    description: Turns the foreman's sketch into dig segments with depth and slope.
+
+  - id: dispatcher
+    name: Dig Dispatcher
+    kind: service
+    at: [1, 1]
+    description: Hands each dig segment to a free digger and tracks progress.
+
+  - id: burrow-map
+    name: Burrow Map
+    kind: store
+    at: [2, 1]
+    description: 3D map of every tunnel, merged from the diggers' snout scans.
+
+  - id: radio-gateway
+    name: Tunnel Radio Gateway
+    kind: service
+    at: [0.5, 2]
+    runtime: MQTT broker + radio bridge
+
+  - id: plant-link
+    name: Plant Link
+    kind: service
+    at: [3, 2]
+    description: Talks to the conveyor, the charging den and the sensor mesh.
+
+  - id: telemetry
+    name: Telemetry Store
+    kind: store
+    at: [2, 2]
+    runtime: TimescaleDB, 90 days
+
+connections:
+  - id: app-api
+    from: foreman-app
+    to: foreman-api
+    direction: both
+    type: network
+    protocol: HTTPS + WebSocket
+    data_format: JSON
+    timing: live updates 1 Hz, commands on event
+    owner: surface-team
+    realizes: app-hq
+
+  - id: api-planner
+    from: foreman-api
+    to: tunnel-planner
+    direction: both
+    type: network
+    protocol: gRPC
+    data_format: Protobuf
+    timing: on request
+    owner: hq-team
+
+  - id: api-dispatcher
+    from: foreman-api
+    to: dispatcher
+    direction: both
+    type: network
+    protocol: gRPC
+    data_format: Protobuf
+    timing: on event
+    owner: hq-team
+
+  - id: map-api
+    from: burrow-map
+    to: foreman-api
+    type: network
+    protocol: gRPC stream
+    data_format: Protobuf (map tiles)
+    timing: on change
+    owner: hq-team
+
+  - id: planner-dispatcher
+    from: tunnel-planner
+    to: dispatcher
+    type: network
+    protocol: gRPC
+    data_format: Protobuf (dig segments)
+    timing: on new plan
+    owner: hq-team
+
+  - id: planner-map
+    from: burrow-map
+    to: tunnel-planner
+    type: network
+    protocol: gRPC
+    data_format: Protobuf (map tiles)
+    timing: on request
+    owner: hq-team
+
+  - id: weather-planner
+    from: weather
+    to: tunnel-planner
+    type: undefined
+    owner: hq-team
+    realizes: weather-hq
+
+  - id: dispatcher-gateway
+    from: dispatcher
+    to: radio-gateway
+    direction: both
+    type: network
+    protocol: MQTT
+    data_format: Protobuf
+    timing: orders on event, state 2 Hz
+    owner: hq-team
+
+  - id: gateway-map
+    from: radio-gateway
+    to: burrow-map
+    type: network
+    protocol: MQTT
+    data_format: Protobuf (scan patches)
+    timing: 2 Hz
+    owner: hq-team
+
+  - id: gateway-planner
+    from: radio-gateway
+    to: tunnel-planner
+    type: network
+    protocol: MQTT
+    data_format: Protobuf (soil readings)
+    timing: 1 Hz
+    owner: hq-team
+
+  - id: gateway-molly
+    from: radio-gateway
+    to: digger-molly
+    direction: both
+    type: radio
+    protocol: MQTT over tunnel radio
+    data_format: Protobuf (dig orders, state)
+    timing: state 2 Hz, orders on event
+    owner: hq-team
+    realizes: hq-molly
+
+  - id: gateway-max
+    from: radio-gateway
+    to: digger-max
+    direction: both
+    type: radio
+    protocol: MQTT over tunnel radio
+    data_format: Protobuf (dig orders, state)
+    timing: state 2 Hz, orders on event
+    owner: hq-team
+    realizes: hq-max
+
+  - id: plant-conveyor
+    from: plant-link
+    to: soil-conveyor
+    direction: both
+    type: fieldbus
+    protocol: OPC UA
+    data_format: OPC UA companion model
+    timing: 500 ms
+    owner: plant-team
+    realizes: hq-conveyor
+
+  - id: mesh-plant
+    from: tunnel-mesh
+    to: plant-link
+    type: network
+    protocol: MQTT
+    data_format: JSON (SenML)
+    timing: 1 reading / node / 10 s
+    owner: plant-team
+    realizes: mesh-hq
+
+  - id: plant-den
+    from: plant-link
+    to: charging-den
+    direction: both
+    type: fieldbus
+    protocol: Modbus TCP
+    data_format: holding registers
+    timing: 1 s
+    owner: plant-team
+    realizes: hq-den
+
+  - id: plant-telemetry
+    from: plant-link
+    to: telemetry
+    type: network
+    protocol: SQL
+    data_format: rows
+    timing: batched every 10 s
+    owner: hq-team
+
+  - id: gateway-telemetry
+    from: radio-gateway
+    to: telemetry
+    type: network
+    protocol: SQL
+    data_format: rows
+    timing: batched every 10 s
+    owner: hq-team

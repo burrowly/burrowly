@@ -1,0 +1,43 @@
+# Publishes the landing page (site/) and the live demo (/demo/, the Molehill Works example)
+# to GitHub Pages. Turn it on once: repo Settings > Pages > Source: GitHub Actions.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the demo model
+        run: node tools/check.mjs --model examples/molehill-works --quiet
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/demo
+          cp -r site/. _site/
+          cp -r docs/media _site/media
+          cp brand/burrowly-mark.svg brand/burrowly-social-1280x640.png _site/
+          cp -r viewer/. _site/demo/
+          cp -r examples/molehill-works _site/demo/model
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+      - id: deployment
+        uses: actions/deploy-pages@v4

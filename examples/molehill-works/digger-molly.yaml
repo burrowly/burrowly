@@ -1,0 +1,224 @@
+title: Digger Molly (M-01)
+description: One digging robot. Claws move it, the drill head cuts, and the spoil hatch drops soil on the conveyor.
+owner: digger-team
+status: example
+
+external:
+  - { id: burrow-hq,     at: [0, 0] }
+  - { id: soil-conveyor, at: [3, 0] }
+  - { id: charging-den,  at: [3.5, 3] }
+
+kinds:
+  compute:  { label: Computer,   badge: PC, color: blue }
+  sensor:   { label: Sensor,     badge: S,  color: teal }
+  actuator: { label: Actuator,   badge: A,  color: orange }
+  safety:   { label: Safety,     badge: "!", color: red }
+  battery:  { label: Battery,    badge: B,  color: amber }
+
+connection_types:
+  ethernet: { label: Ethernet,          color: slate }
+  realtime: { label: Real-time bus,     color: orange }
+  safe:     { label: Safety circuit,    color: red }
+
+blocks:
+  - id: radio
+    name: Tunnel Radio
+    kind: compute
+    at: [0, 1]
+    hardware: 868 MHz mesh modem
+
+  - id: brain
+    name: Burrow Brain
+    subtitle: main computer
+    kind: compute
+    at: [1, 2]
+    hardware: ARM SoC, 16 GB, ROS 2
+    description: Plans each move, runs SLAM on the snout scans and drives the claws and the drill head.
+
+  - id: safety
+    name: Safety Controller
+    kind: safety
+    at: [2, 1]
+    hardware: safety PLC, SIL 2
+
+  - id: spoil-hatch
+    name: Spoil Hatch
+    kind: actuator
+    at: [3, 1]
+
+  - id: whiskers
+    name: Whisker Array
+    subtitle: 12 whiskers
+    kind: sensor
+    at: [0, 2]
+    description: Touch sensors around the body that feel roots, rocks and tunnel walls.
+
+  - id: drill-head
+    name: Drill Head
+    kind: actuator
+    at: [1, 3]
+    detail: drill-head.yaml
+
+  - id: claws
+    name: Claw Tracks
+    subtitle: 4 drives
+    kind: actuator
+    at: [2, 2]
+
+  - id: battery
+    name: Battery Pack
+    subtitle: 48 V, 5 kWh
+    kind: battery
+    at: [2.5, 3]
+
+connections:
+  - id: radio-hq
+    from: radio
+    to: burrow-hq
+    direction: both
+    type: radio
+    protocol: MQTT over tunnel radio
+    data_format: Protobuf (dig orders, state)
+    timing: state 2 Hz, orders on event
+    owner: hq-team
+    realizes: hq-molly
+
+  - id: radio-brain
+    from: radio
+    to: brain
+    direction: both
+    type: ethernet
+    protocol: Ethernet / ROS 2 DDS
+    data_format: ROS 2 messages
+    timing: on event
+    owner: digger-team
+
+  - id: radio-safety
+    from: radio
+    to: safety
+    type: safe
+    protocol: safe stop over radio
+    data_format: FSoE frame
+    timing: watchdog 100 ms
+    owner: digger-team
+    notes: If HQ goes silent for 100 ms, the digger stops by itself.
+
+  - id: whiskers-brain
+    from: whiskers
+    to: brain
+    type: realtime
+    protocol: CAN FD
+    data_format: whisker bend angles
+    timing: 200 Hz
+    owner: digger-team
+
+  - id: brain-head
+    from: brain
+    to: drill-head
+    direction: both
+    type: realtime
+    protocol: EtherCAT
+    data_format: CiA 402 drive profile
+    timing: 1 ms cycle
+    owner: digger-team
+    label: 1 ms
+
+  - id: head-scan
+    from: drill-head
+    to: brain
+    type: ethernet
+    protocol: Ethernet UDP
+    data_format: point cloud
+    timing: 20 Hz
+    owner: digger-team
+    label: scan
+
+  - id: brain-claws
+    from: brain
+    to: claws
+    type: realtime
+    protocol: EtherCAT
+    data_format: CiA 402 drive profile
+    timing: 1 ms cycle
+    owner: digger-team
+    label: 1 ms
+
+  - id: brain-safety
+    from: brain
+    to: safety
+    direction: both
+    type: safe
+    protocol: FSoE
+    data_format: safety PDO
+    timing: 4 ms
+    owner: digger-team
+
+  - id: safety-head
+    from: safety
+    to: drill-head
+    type: safe
+    protocol: STO, hard-wired
+    data_format: 24 V signal
+    timing: under 10 ms
+    owner: digger-team
+    label: STO
+
+  - id: safety-claws
+    from: safety
+    to: claws
+    type: safe
+    protocol: STO, hard-wired
+    data_format: 24 V signal
+    timing: under 10 ms
+    owner: digger-team
+    label: STO
+
+  - id: brain-hatch
+    from: brain
+    to: spoil-hatch
+    type: realtime
+    protocol: CANopen
+    data_format: PDO
+    timing: 10 ms
+    owner: digger-team
+
+  - id: hatch-conveyor
+    from: spoil-hatch
+    to: soil-conveyor
+    type: soil
+    protocol: spoil hatch onto belt
+    data_format: loose soil
+    timing: about 40 kg / min
+    owner: digger-team
+    label: soil
+    realizes: molly-conveyor
+
+  - id: den-battery
+    from: charging-den
+    to: battery
+    type: power
+    protocol: 48 V DC docking contacts
+    data_format: n/a
+    timing: while docked
+    owner: plant-team
+    label: 48 V
+    realizes: den-molly
+
+  - id: battery-brain
+    from: battery
+    to: brain
+    type: realtime
+    protocol: CAN
+    data_format: BMS state of charge
+    timing: 100 ms
+    owner: digger-team
+
+  - id: battery-head
+    from: battery
+    to: drill-head
+    type: power
+    protocol: 48 V DC bus
+    data_format: n/a
+    timing: continuous
+    owner: digger-team
+    label: 48 V

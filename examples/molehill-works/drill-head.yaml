@@ -1,0 +1,131 @@
+title: Drill Head
+description: The business end of Digger Molly. A cutter wheel, its drive, and the sensors that look and feel ahead.
+owner: digger-team
+status: example
+
+external:
+  - { id: brain,   at: [1, 0] }
+  - { id: safety,  at: [3, 0] }
+  - { id: battery, at: [3, 3] }
+
+kinds:
+  mcu:   { label: Microcontroller, badge: µC, color: blue }
+
+blocks:
+  - id: snout-lidar
+    name: Snout Lidar
+    kind: sensor
+    at: [0, 1]
+    hardware: solid-state lidar, 120° x 90°
+
+  - id: head-mcu
+    name: Head MCU
+    kind: mcu
+    at: [1, 1.5]
+    hardware: STM32H7, EtherCAT slave
+
+  - id: cutter-driver
+    name: Cutter Driver
+    kind: actuator
+    at: [3, 1.5]
+    hardware: 48 V BLDC servo drive with STO
+
+  - id: hardness-probe
+    name: Soil Hardness Probe
+    kind: sensor
+    at: [0, 2.5]
+
+  - id: torque-sensor
+    name: Torque Sensor
+    kind: sensor
+    at: [1, 3]
+
+  - id: cutter-motor
+    name: Cutter Motor
+    subtitle: 2 kW BLDC
+    kind: actuator
+    at: [2, 3]
+
+connections:
+  - id: lidar-brain
+    from: snout-lidar
+    to: brain
+    type: ethernet
+    protocol: Ethernet UDP
+    data_format: point cloud
+    timing: 20 Hz
+    owner: digger-team
+    label: scan
+    realizes: head-scan
+
+  - id: mcu-brain
+    from: head-mcu
+    to: brain
+    direction: both
+    type: realtime
+    protocol: EtherCAT
+    data_format: CiA 402 drive profile
+    timing: 1 ms cycle
+    owner: digger-team
+    label: 1 ms
+    realizes: brain-head
+
+  - id: mcu-driver
+    from: head-mcu
+    to: cutter-driver
+    direction: both
+    type: realtime
+    protocol: CANopen
+    data_format: CiA 402 drive profile
+    timing: 1 ms
+    owner: digger-team
+
+  - id: hardness-mcu
+    from: hardness-probe
+    to: head-mcu
+    type: realtime
+    protocol: I2C
+    data_format: hardness in kPa
+    timing: 10 Hz
+    owner: digger-team
+
+  - id: torque-mcu
+    from: torque-sensor
+    to: head-mcu
+    type: realtime
+    protocol: SPI
+    data_format: torque in Nm, 24 bit
+    timing: 1 kHz
+    owner: digger-team
+
+  - id: driver-motor
+    from: cutter-driver
+    to: cutter-motor
+    type: power
+    protocol: 3-phase motor cable
+    data_format: n/a
+    timing: 20 kHz PWM
+    owner: digger-team
+    label: 3-phase
+
+  - id: safety-driver
+    from: safety
+    to: cutter-driver
+    type: safe
+    protocol: STO, hard-wired
+    data_format: 24 V signal
+    timing: under 10 ms
+    owner: digger-team
+    label: STO
+    realizes: safety-head
+
+  - id: battery-driver
+    from: battery
+    to: cutter-driver
+    type: power
+    protocol: 48 V DC bus
+    data_format: n/a
+    timing: continuous
+    owner: digger-team
+    label: 48 V
+    realizes: battery-head

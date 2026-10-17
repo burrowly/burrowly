@@ -2,21 +2,24 @@
 // Bundle the viewer and every model/*.yaml into ONE html file you can share,
 // attach to a wiki page or publish from CI.
 //   node tools/build.mjs                 -> dist/burrowly.html
+//   node tools/build.mjs --model examples/molehill-works --out dist/demo.html
 //   node tools/build.mjs --fragment out  -> body-only variant (for hosts that add their own <html>)
 // Also exits non-zero if a YAML file does not parse, so it works as a CI check.
 import { readFile, writeFile, readdir, mkdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const args = process.argv.slice(2);
+const arg = (name, def) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : def; };
 const fragIdx = args.indexOf("--fragment");
-const out = fragIdx >= 0 ? args[fragIdx + 1] : join(root, "dist", "burrowly.html");
+const out = resolve(fragIdx >= 0 ? args[fragIdx + 1] : arg("--out", join(root, "dist", "burrowly.html")));
+const modelDir = resolve(arg("--model", process.env.MODEL_DIR || join(root, "model")));
 
 const files = {};
-for (const name of (await readdir(join(root, "model"))).sort()) {
-  if (/\.ya?ml$/.test(name)) files[name] = await readFile(join(root, "model", name), "utf8");
+for (const name of (await readdir(modelDir)).sort()) {
+  if (/\.ya?ml$/.test(name)) files[name] = await readFile(join(modelDir, name), "utf8");
 }
 // parse check with the same library the viewer uses
 const jsyamlSrc = await readFile(join(root, "viewer", "vendor", "js-yaml.min.js"), "utf8");

@@ -1,0 +1,54 @@
+# Data streams in the Molehill Works demo. Each path runs from source to receiver,
+# naming blocks by their drill-down path (block ids from system.yaml down, joined by "/").
+streams:
+  - id: snout-scan
+    name: Snout scan to the burrow map
+    owner: digger-team
+    data: point cloud, about 30k points
+    rate: 20 Hz
+    path:
+      - { block: digger-molly/drill-head/snout-lidar, duration: 8 ms, note: one sweep }
+      - { block: digger-molly/brain, duration: 25 ms, note: SLAM and compression to a scan patch }
+      - { block: digger-molly/radio, duration: 60 ms }
+      - { block: burrow-hq/radio-gateway, duration: 5 ms }
+      - { block: burrow-hq/burrow-map, duration: 40 ms, note: merged into the 3D map }
+      - { block: burrow-hq/foreman-api, duration: 10 ms }
+      - { block: foreman-app, duration: 50 ms, note: shown in the 3D view }
+
+  - id: stop-all
+    name: Foreman stop button
+    owner: surface-team
+    data: stop command
+    rate: on press
+    path:
+      - { block: foreman-app, duration: 20 ms }
+      - { block: burrow-hq/foreman-api, duration: 5 ms }
+      - { block: burrow-hq/dispatcher, duration: 5 ms }
+      - { block: burrow-hq/radio-gateway, duration: 5 ms }
+      - { block: digger-molly/radio, duration: 60 ms }
+      - { block: digger-molly/safety, via: radio-safety, duration: 4 ms }
+      - { block: digger-molly/drill-head/cutter-driver, duration: 8 ms, note: STO cuts motor power }
+
+  - id: torque-guard
+    name: Cutter torque guard
+    owner: digger-team
+    description: Stops the cutter before it chews on a rock it can't handle.
+    data: torque in Nm
+    rate: 1 kHz
+    path:
+      - { block: digger-molly/drill-head/torque-sensor, duration: 200 µs }
+      - { block: digger-molly/drill-head/head-mcu, duration: 300 µs }
+      - { block: digger-molly/drill-head/cutter-driver, duration: 1 ms }
+
+  - id: soil-hardness
+    name: Soil hardness to the tunnel plan
+    owner: hq-team
+    data: hardness in kPa per 10 cm of tunnel
+    rate: 1 Hz
+    path:
+      - { block: digger-molly/drill-head/hardness-probe, duration: 100 ms }
+      - { block: digger-molly/drill-head/head-mcu, duration: 1 ms }
+      - { block: digger-molly/brain, duration: 2 ms }
+      - { block: digger-molly/radio, duration: 60 ms }
+      - { block: burrow-hq/radio-gateway, duration: 5 ms }
+      - { block: burrow-hq/tunnel-planner, duration: 300 ms, note: re-plans the next segment }
