@@ -411,6 +411,11 @@ const NAMED = ["blue","green","purple","gray","orange","amber","teal","red","pin
 const CORE_CONN_FIELDS = ["type","protocol","data_format","timing","owner"];
 const CONN_HIDDEN = new Set(["id","from","to","direction","label","route","links","notes","realizes"]);
 const BLOCK_HIDDEN = new Set(["id","name","subtitle","kind","at","detail","links","description"]);
+// streams.js is missing when a server started before an update is still running: keep the viewer working without streams
+const STREAMS_MISSING = typeof BurrowlyStreams === "undefined";
+if (STREAMS_MISSING) window.BurrowlyStreams = { FILE: "streams.yaml", normalizeStreams: (d) => ({ ...(d && typeof d === "object" ? d : {}), streams: [] }),
+  analyze: () => ({ streams: [], issues: [{ sev: "warn", file: "streams.yaml", msg: "Data streams are off: the server could not send streams.js. Restart it (stop node tools/serve.mjs and start it again, or docker compose up -d --build)." }], carries: new Map(), flow: new Map(), canon: () => null }),
+  parseDuration: () => null, fmtDuration: (ms) => ms + " ms", renamedPath: (p) => p };
 const STREAMS = BurrowlyStreams.FILE;   // model/streams.yaml: data streams across the levels
 const STREAM_HIDDEN = new Set(["id","name","description","path","derived_from","links"]);
 
