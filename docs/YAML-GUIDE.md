@@ -376,3 +376,6 @@ Both the multi-line and the one-line `{ title, url }` forms work. Links open in 
   (for example `model/robot-cell.yaml @robot-team`).
 - `node tools/build.mjs` fails when a file does not parse, so you can run it in CI to
   block broken YAML from merging, and publish `dist/burrowly.html` as a read-only snapshot.
+- `node tools/check.mjs` runs the Checks tab from the command line and fails on errors. It also
+  lists which connection fields are still empty.
+- GitHub Copilot can write and fill in these files for you; see "Using GitHub Copilot" in the README.

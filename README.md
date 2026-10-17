@@ -13,6 +13,8 @@ burrowly/               <- this repository
   viewer/index.html      <- the viewer/editor (plain HTML, no build step)
   tools/serve.mjs        <- local server: view + edit + save back to model/
   tools/build.mjs        <- bundle everything into one shareable HTML file
+  tools/check.mjs        <- run the model checks from the command line (CI, Copilot)
+  .github/               <- GitHub Copilot instructions, skill and prompts
   Dockerfile, compose.yaml  <- run it as a container
 ```
 
@@ -130,6 +132,42 @@ node tools/build.mjs          # -> dist/burrowly.html (single file)
 ```
 
 `build.mjs` exits with an error if any YAML file does not parse, so you can run it in CI.
+
+To run the **Checks** tab from the command line:
+
+```bash
+node tools/check.mjs                  # errors, checks, and which connection fields are still empty
+node tools/check.mjs --model path/to/model --quiet
+```
+
+It exits with an error when the model has errors (warnings alone pass).
+
+## Using GitHub Copilot
+
+The repository tells GitHub Copilot how Burrowly works, so Copilot agent mode in VS Code can
+build diagrams from your notes and fill in connection details from the documentation it can reach
+(an MCP docs server, web pages, or files in your workspace).
+
+| File | What it does |
+|------|--------------|
+| `.github/copilot-instructions.md` | Always loaded: what Burrowly is and the rules for editing it |
+| `.github/instructions/burrowly-model.instructions.md` | Loaded when Copilot edits `model/*.yaml` |
+| `.github/skills/burrowly-model/SKILL.md` | The full how-to: format, filling in from docs, checking |
+| `.github/prompts/burrowly-import.prompt.md` | `/burrowly-import`: turn notes or a list of interfaces into YAML |
+| `.github/prompts/burrowly-fill.prompt.md` | `/burrowly-fill`: fill empty protocol, data format, timing and owner fields from the docs |
+
+How to use it:
+
+1. Open the repository in VS Code and open Copilot Chat in **Agent** mode.
+2. Connect your documentation: add its MCP server in VS Code, or add the docs folder to the workspace.
+3. Type `/burrowly-import` and paste your notes, or `/burrowly-fill` to fill gaps in the existing model.
+   You can also just ask, for example "add the vision system under Robot Cell and fill in its interfaces from the docs".
+4. Copilot edits `model/*.yaml`, runs `node tools/check.mjs`, and tells you what it filled and from where.
+   Every value it adds has its source in `links:`; fields the docs don't answer stay empty.
+5. Refresh http://localhost:4321 to see the result, and review the change with `git diff` if you version your model.
+
+Skills need a recent VS Code (agent skills turned on with the `chat.useAgentSkills` setting where your
+version still has it). Without skills, the instructions and prompt files still work.
 
 ## The model
 

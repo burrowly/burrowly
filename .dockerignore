@@ -9,3 +9,4 @@ model-backup*/
 Dockerfile
 compose.yaml
 .dockerignore
+.github/
