@@ -15,7 +15,8 @@ Use the `burrowly-model` skill in `.github/skills/burrowly-model/SKILL.md`. In s
 
 - Edit the YAML text in place. Keep comments, key order and the section order
   (header, `kinds`, `connection_types`, `external`, `blocks`, `connections`). Indent with 2 spaces.
-- Never rename an existing `id`: connections, `external:` entries and `realizes:` refer to it.
+- Never rename an existing `id`: connections, `external:` entries, `realizes:` and the stream paths
+  in `model/streams.yaml` refer to it.
 - Never invent values. Every protocol, data format, timing or owner you fill in must come from a
   source you actually read, and that source goes in the item's `links:`.
 - After every change run `node tools/check.mjs` and fix all errors.
@@ -27,4 +28,5 @@ Use the `burrowly-model` skill in `.github/skills/burrowly-model/SKILL.md`. In s
 - Keep it dependency-free: Node 18+ built-ins only, and the vendored `viewer/vendor/js-yaml.min.js`.
 - The viewer writes YAML by editing text, not by re-serialising, so comments survive. Keep it that way.
 - If you change the checks in `viewer/index.html` (`function checks()`), make the same change in `tools/check.mjs`.
+- Data stream logic lives only in `viewer/streams.js`, which both the viewer and `tools/check.mjs` load. Change it there.
 - Examples in docs and code stay generic (Controller, Robot Cell, Power Unit). No real project names.

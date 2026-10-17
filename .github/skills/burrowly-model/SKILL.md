@@ -102,6 +102,10 @@ or files in the workspace). Use it like this:
   a `title`, an `external:` entry for every block it connects to one level up, the inner `blocks`,
   and inner `connections` with `realizes:` pointing at the outer connection ids.
 - File names: letters, digits, `-`, `_`, `.`; ending in `.yaml`.
+- Data streams (data that travels through several blocks) go in `model/streams.yaml`, not in the
+  level files. A stream's `path` lists blocks by drill-down path (`robot-cell/cell-plc`), in the
+  order the data flows. Only add a stream, step or `duration` that a document states. See section 11
+  of `docs/YAML-GUIDE.md`. `streams.yaml` is a reserved name: never use it for a drill-down level.
 
 ## 5. Editing rules
 
@@ -113,7 +117,8 @@ or files in the workspace). Use it like this:
 - Quote any value containing `: ` or ` #`, values starting with a special character
   (`"!"`, `"*"`, `"@"`), and hex colours.
 - Never rename or delete an existing `id` unless the user asks: other levels refer to it through
-  `external:` and `realizes:`. If you must, update every reference and run the checks.
+  `external:`, `realizes:` and stream paths in `streams.yaml`. If you must, update every reference
+  and run the checks.
 
 ## 6. Check your work
 
