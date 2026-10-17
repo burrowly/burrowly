@@ -305,6 +305,30 @@ body.ym-open .side { display: none; }
 .menu button:hover, .menu button:focus-visible { background: var(--surface-2); }
 .menu button small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
 #print-root { display: none; }
+.soverlay { position: fixed; inset: 0; z-index: 30; background: var(--bg, var(--surface-2)); display: flex; flex-direction: column; }
+.ov-headbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.ov-body { overflow: auto; padding: 16px; display: grid; gap: 12px; align-content: start; }
+.ov-stream { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; break-inside: avoid; }
+.ov-head { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.ov-head strong { font-size: 15px; }
+.ov-head .meta { color: var(--muted); font-size: 12.5px; }
+.ov-head .tot { margin-left: auto; font-family: var(--font-mono); font-weight: 600; }
+.ov-flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px 0; }
+.ov-step { border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 120px; max-width: 220px; background: var(--surface); text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.ov-step:hover { border-color: var(--accent); }
+.ov-step .nm { font-weight: 600; font-size: 13px; }
+.ov-step .lv { color: var(--muted); font-size: 11px; }
+.ov-step .du { font-family: var(--font-mono); font-size: 12px; margin-top: 2px; }
+.ov-step.bad { border-color: var(--err); border-style: dashed; }
+.ov-hop { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 8px; min-width: 60px; max-width: 180px; color: var(--muted); font-size: 11px; text-align: center; }
+.ov-hop .ar { font-size: 16px; line-height: 1; color: var(--ink); }
+.ov-hop.bad { color: var(--err); }
+.ov-bar { display: flex; height: 18px; border-radius: 4px; overflow: hidden; background: var(--surface-2); font-size: 10.5px; }
+.ov-bar i { display: flex; align-items: center; justify-content: center; color: #fff; font-style: normal; white-space: nowrap; overflow: hidden; border-right: 1px solid var(--surface); min-width: 2px; }
+.ov-issues { font-size: 12px; display: grid; gap: 3px; }
+.ov-issues .err { color: var(--err); } .ov-issues .warn { color: var(--warn); }
+.ov-empty { color: var(--muted); padding: 30px; text-align: center; }
+body.ov-open { overflow: hidden; }
 @media print {
   @page { size: A4 landscape; margin: 10mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -321,6 +345,9 @@ body.ym-open .side { display: none; }
   .pp th, .pp td { padding: 3px 6px; }
   .pp tr { break-inside: avoid; }
   .pp .pp-foot { color: var(--muted); font-size: 9.5px; margin-top: 6px; }
+  .pp.ov { break-after: auto; }
+  .pp.ov .ov-stream { border-color: #ccc; margin-bottom: 8px; }
+  .pp.ov .ov-bar i { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 </head>
@@ -332,6 +359,7 @@ body.ym-open .side { display: none; }
     <button class="chip" id="issues-chip" type="button"></button>
     <span class="chip neutral" id="save-chip" hidden></span>
     <button class="btn" id="undo-btn" type="button" hidden title="Undo (Ctrl+Z)">Undo</button>
+    <button class="btn" id="streams-btn" type="button" data-act="ov-open" title="All data streams on one screen (S)">Streams</button>
     <button class="btn" id="upload-btn" type="button" title="Upload a .yaml file or a .zip of model files (or drop one on the page)">Upload</button>
     <input type="file" id="upload-input" accept=".yaml,.yml,.zip,application/zip,text/yaml" multiple hidden>
     <div class="menu-wrap">
@@ -341,6 +369,9 @@ body.ym-open .side { display: none; }
         <button type="button" role="menuitem" data-export="pdf">PDF – this level</button>
         <button type="button" role="menuitem" data-export="png">PNG image – this level</button>
         <button type="button" role="menuitem" data-export="svg">SVG vector – this level<small>Opens in Visio, draw.io, Inkscape, PowerPoint</small></button>
+        <button type="button" role="menuitem" data-export="streams-pdf">PDF – data streams<small>Every stream with its steps and durations</small></button>
+        <button type="button" role="menuitem" data-export="streams-xlsx">Excel – data streams<small>One row per step, with connection and duration</small></button>
+        <button type="button" role="menuitem" data-export="streams-csv">CSV – data streams</button>
         <button type="button" role="menuitem" data-export="yaml">YAML – this level<small>The .yaml file behind this diagram</small></button>
         <button type="button" role="menuitem" data-export="yaml-all">YAML – all levels (.zip)<small>Every file in model/, ready to unzip into a repo</small></button>
       </div>
@@ -393,6 +424,20 @@ body.ym-open .side { display: none; }
 </div>
 
 <div id="print-root" aria-hidden="true"></div>
+
+<div class="soverlay" id="soverlay" hidden role="dialog" aria-modal="true" aria-labelledby="ov-title">
+  <div class="ov-headbar">
+    <div class="ym-titles"><strong id="ov-title">Data streams</strong><span class="hint" id="ov-sub"></span></div>
+    <div class="ym-tools">
+      <button class="btn" type="button" data-export="streams-pdf">PDF</button>
+      <button class="btn" type="button" data-export="streams-xlsx">Excel</button>
+      <button class="btn" type="button" data-export="streams-csv">CSV</button>
+      <button class="btn" type="button" data-act="new-stream-ov">Add a stream</button>
+      <button class="btn primary" type="button" data-act="ov-close">Close</button>
+    </div>
+  </div>
+  <div class="ov-body" id="ov-body"></div>
+</div>
 
 <div class="ymodal" id="ymodal" hidden role="dialog" aria-modal="false" aria-labelledby="ym-title">
   <div class="ym-head">
@@ -1164,7 +1209,7 @@ function renderStreams(issueList) {
     return c + `</div>`;
   }).join("");
   if (!R.streams.length && !sf.error) h += `<p class="hint">No streams in ${STREAMS} yet.</p>`;
-  h += `<div class="row"><button class="btn" type="button" data-act="new-stream">Add a stream</button><button class="btn" type="button" data-act="streams-yaml">Edit ${STREAMS}</button></div>`;
+  h += `<div class="row"><button class="btn" type="button" data-act="new-stream">Add a stream</button><button class="btn" type="button" data-act="ov-open">All streams on one screen</button><button class="btn" type="button" data-act="streams-yaml">Edit ${STREAMS}</button></div>`;
   el.innerHTML = `<div class="insp">${h}</div>`;
 }
 function renderEditor() {
@@ -1365,9 +1410,90 @@ document.addEventListener("click", (e) => {
   if (k === "pdf-all") printLevels(levelOrder());
   else if (k === "pdf") printLevels([S.current]);
   else if (k === "yaml") { const yf = $("ymodal").hidden ? S.current : ymFile(); download(yf, new Blob([S.files[yf].text], { type: "application/x-yaml" })); }
+  else if (k === "streams-pdf") printStreams();
+  else if (k === "streams-csv") download(fileLabel(S.root) + "-streams.csv", new Blob([streamsCsv()], { type: "text/csv;charset=utf-8" }));
+  else if (k === "streams-xlsx") download(fileLabel(S.root) + "-streams.xlsx", streamsXlsx());
   else if (k === "yaml-all") download(fileLabel(S.root) + "-model.zip", zipStore(Object.keys(S.files).filter(f => !S.files[f].missing).map(f => ["model/" + f, S.files[f].text])));
   else exportImage(k);
 });
+/* ------------------------------------------------------------------ streams overview (full screen) and exports */
+const hopInfo = (c) => [c.protocol, c.data_format, c.timing].filter(v => !isEmpty(v)).map(fmtVal).join(" · ");
+const hopConn = (x) => x.hop?.carried?.find(k => hopInfo(k.c)) || x.hop?.best?.[0] || null;
+const levelTitle = (f) => f ? (S.files[f]?.data?.title || fileLabel(f)) : "";
+// one row per step, used by the overview and by the CSV / Excel exports
+function streamRows() {
+  const rows = [];
+  for (const st of streamsOf().streams) for (const x of st.steps) {
+    const g = x.i > 0 ? hopConn(x) : null;
+    rows.push({ stream_id: st.id, stream: st.name, owner: st.raw.owner ?? "", step: x.i + 1, block: x.name || x.ref || "", block_path: x.path || x.ref || "", level: levelTitle(x.file),
+      connection: g?.c.id || "", protocol: g ? fmtVal(g.c.protocol ?? "") : "", data_format: g ? fmtVal(g.c.data_format ?? "") : "", timing: g ? fmtVal(g.c.timing ?? "") : "",
+      duration: isEmpty(x.duration) ? "" : String(x.duration), duration_ms: x.ms ?? "", stream_total_ms: st.steps.length - st.unknown ? Math.round(st.totalMs * 1000) / 1000 : "", status: st.ok ? "ok" : "error" });
+  }
+  return rows;
+}
+function overviewHtml(forPrint = false) {
+  const R = streamsOf(), list = checks().filter(i => i.file === STREAMS);
+  if (!R.streams.length) return `<div class="ov-empty">No data streams yet. ${forPrint ? "" : `Use <b>Add a stream</b> to trace one on the diagram.`}</div>`;
+  const shade = (col, k, n) => `color-mix(in srgb, ${col} ${Math.round(100 - (k / Math.max(1, n)) * 55)}%, #555)`;
+  return R.streams.map(st => {
+    const col = streamColor(st.id), r = st.raw, mine = list.filter(i => i.stream === st.id), nerr = mine.filter(i => i.sev === "err").length;
+    const meta = [r.owner && `owner ${r.owner}`, r.rate, r.data].filter(Boolean).map(v => esc(fmtVal(v))).join(" · ");
+    const total = st.steps.length - st.unknown ? BurrowlyStreams.fmtDuration(st.totalMs) + (st.unknown ? ` + ${st.unknown} unknown` : "") : "no durations";
+    let h = `<div class="ov-stream" style="border-left:4px solid ${col}"><div class="ov-head"><strong>${esc(st.name)}</strong><span class="meta">${meta}</span>` +
+      `${nerr ? `<span class="chip err">${nerr} error${nerr > 1 ? "s" : ""}</span>` : mine.length ? `<span class="chip warn">${mine.length} check${mine.length > 1 ? "s" : ""}</span>` : ""}<span class="tot">${esc(total)}</span></div><div class="ov-flow">`;
+    for (const x of st.steps) {
+      if (x.i > 0) { const g = hopConn(x), t = g ? hopInfo(g.c) || g.c.id || "connected" : "no route";
+        h += `<div class="ov-hop${g ? "" : " bad"}"><span class="ar">→</span><span>${esc(t)}</span></div>`; }
+      h += `<button type="button" class="ov-step${x.ok ? "" : " bad"}" ${x.ok && !forPrint ? `data-ov-go="${esc(x.file)}" data-ov-stream="${esc(st.id)}"` : ""} style="border-color:${x.ok ? col : ""}">` +
+        `<div class="nm">${x.i + 1}. ${esc(x.name || x.ref || "?")}</div><div class="lv">${esc(levelTitle(x.file) || "not found")}</div>` +
+        `<div class="du">${x.ms !== null ? esc(BurrowlyStreams.fmtDuration(x.ms)) : isEmpty(x.duration) ? "–" : esc(x.duration)}</div></button>`;
+    }
+    h += `</div>`;
+    const timed = st.steps.filter(x => x.ms > 0);
+    if (timed.length && st.totalMs > 0) h += `<div class="ov-bar" title="Share of the total time per step">${timed.map((x, k) => `<i style="width:${(x.ms / st.totalMs * 100).toFixed(2)}%;background:${shade(col, k, timed.length)}" title="${esc(x.name)}: ${esc(BurrowlyStreams.fmtDuration(x.ms))}">${x.ms / st.totalMs > 0.12 ? esc(trim(x.name, 18)) + " " + esc(BurrowlyStreams.fmtDuration(x.ms)) : ""}</i>`).join("")}</div>`;
+    if (mine.length) h += `<div class="ov-issues">${mine.map(i => `<div class="${i.sev}">${i.sev === "err" ? "Error" : "Check"}: ${esc(i.msg.replace(/^Stream "[^"]*": /, ""))}</div>`).join("")}</div>`;
+    return h + `</div>`;
+  }).join("");
+}
+function ovRender() {
+  if ($("soverlay").hidden) return;
+  const R = streamsOf(), n = R.streams.length;
+  $("ov-sub").textContent = n ? `${n} stream${n > 1 ? "s" : ""} in model/${STREAMS} · click a step to see it on the diagram` : "";
+  $("ov-body").innerHTML = overviewHtml();
+}
+function ovOpen() { $("soverlay").hidden = false; document.body.classList.add("ov-open"); ovRender(); $("soverlay").querySelector('[data-act="ov-close"]').focus(); }
+function ovClose() { $("soverlay").hidden = true; document.body.classList.remove("ov-open"); }
+function printStreams() {
+  const root = document.documentElement; S._printTheme = root.getAttribute("data-theme");
+  document.body.classList.add("printing"); root.setAttribute("data-theme", "light");
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  $("print-root").innerHTML = `<section class="pp ov"><h1>Data streams · ${esc(S.files[S.root]?.data?.title || "")}</h1><p class="pp-path">model/${STREAMS}</p>${overviewHtml(true)}<p class="pp-foot">Burrowly · exported ${esc(stamp)}</p></section>`;
+  setTimeout(() => window.print(), 50);
+}
+const ROW_COLS = ["stream_id", "stream", "owner", "step", "block", "block_path", "level", "connection", "protocol", "data_format", "timing", "duration", "duration_ms", "stream_total_ms", "status"];
+function streamsCsv() {
+  const q = (v) => { v = String(v ?? ""); return /[",;\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  return "﻿" + [ROW_COLS.join(","), ...streamRows().map(r => ROW_COLS.map(k => q(r[k])).join(","))].join("\r\n") + "\r\n";
+}
+// Minimal .xlsx (one sheet, inline strings), so Excel opens it with columns in any locale.
+function streamsXlsx() {
+  const x = (v) => String(v).replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+  const col = (i) => { let s = ""; for (i++; i; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s; return s; };
+  const cell = (v, r, c, st = 0) => typeof v === "number" ? `<c r="${col(c)}${r}"${st ? ` s="${st}"` : ""}><v>${v}</v></c>` : v === "" ? "" : `<c r="${col(c)}${r}" t="inlineStr"${st ? ` s="${st}"` : ""}><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+  const rows = [ROW_COLS, ...streamRows().map(r => ROW_COLS.map(k => r[k]))];
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+    `<cols>${ROW_COLS.map((k, i) => `<col min="${i + 1}" max="${i + 1}" width="${["stream", "block", "block_path", "protocol", "data_format", "level"].includes(k) ? 24 : 13}" customWidth="1"/>`).join("")}</cols><sheetData>` +
+    rows.map((r, i) => `<row r="${i + 1}">${r.map((v, c) => cell(v, i + 1, c, i ? 0 : 1)).join("")}</row>`).join("") + `</sheetData><autoFilter ref="A1:${col(ROW_COLS.length - 1)}${rows.length}"/></worksheet>`;
+  const files = [
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Streams" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Streams!$A$1:$${col(ROW_COLS.length - 1)}$${rows.length}</definedName></definedNames></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ["xl/worksheets/sheet1.xml", sheet],
+  ];
+  return new Blob([zipStore(files)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
 // Minimal .zip writer (no compression), so downloading every YAML file needs no library.
 function zipStore(entries) {
   const crcT = zipStore.t ||= Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -1388,7 +1514,7 @@ function zipStore(entries) {
   return new Blob([...parts, ...central, end], { type: "application/zip" });
 }
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("export-menu").hidden) { exportMenu(false); $("export-btn").focus(); } });
-function render() { renderLineToggle(); ymSync(); const list = renderTopbar(); renderCrumbs(); renderDiagram(); renderTable(); renderSide(list); }
+function render() { renderLineToggle(); ymSync(); const list = renderTopbar(); renderCrumbs(); renderDiagram(); renderTable(); renderSide(list); ovRender(); }
 function renderLight() { ymSync(); renderTopbar(); renderCrumbs(); renderDiagram(); renderTable(); }
 
 /* ------------------------------------------------------------------ edit mode: palette */
@@ -1942,8 +2068,9 @@ document.addEventListener("change", (e) => {
 });
 
 document.addEventListener("click", (e) => {
-  const t = e.target.closest("[data-go],[data-act],[data-conn],[data-stream],[role=tab],#edit-btn,#issues-chip,#undo-btn,[data-open]");
+  const t = e.target.closest("[data-ov-go],[data-go],[data-act],[data-conn],[data-stream],[role=tab],#edit-btn,#issues-chip,#undo-btn,[data-open]");
   if (!t) return;
+  if (t.dataset.ovGo !== undefined) { ovClose(); S.stream = t.dataset.ovStream; S.tab = "streams"; go(t.dataset.ovGo); return; }
   if (t.dataset.stream !== undefined && !t.closest("svg")) {
     const id = t.dataset.stream, again = S.tab === "streams" && S.stream === id && t.classList.contains("head");
     S.stream = again ? null : id; S.tab = "streams"; render(); return;
@@ -1980,6 +2107,9 @@ document.addEventListener("click", (e) => {
   if (act === "open-types") { S.tab = "types"; render(); }
   if (act === "streams-yaml") ymOpen(STREAMS);
   if (act === "new-stream") newStream();
+  if (act === "ov-open") ovOpen();
+  if (act === "ov-close") ovClose();
+  if (act === "new-stream-ov") { ovClose(); newStream(); }
   if (act === "trace-start") { S.trace = t.dataset.id; S.stream = t.dataset.id; S.traceWhole = null; S.sel = null;
     const st = streamsOf().streams.find(x => x.id === S.trace), last = st?.steps[st.steps.length - 1];
     if (last?.ok) { const pf = last.file; go(pf); } else render(); }
@@ -2060,6 +2190,8 @@ document.addEventListener("keydown", (e) => {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (S.canSave) saveAll(); }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z" && S.editing && !typing) { e.preventDefault(); undo(); }
+  if (e.key === "Escape" && !$("soverlay").hidden) { ovClose(); return; }
+  if (e.key === "s" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && $("ymodal").hidden) { $("soverlay").hidden ? ovOpen() : ovClose(); return; }
   if (e.key === "Escape" && S.trace && !typing) { S.trace = null; S.traceWhole = null; render(); return; }
   if (e.key === "Escape" && S.sel && !typing) { S.sel = null; render(); }
 });

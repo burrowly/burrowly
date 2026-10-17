@@ -77,7 +77,8 @@ node tools/serve.mjs          # open http://localhost:4321
   blocks, possibly across levels (for example camera images going through a PLC to an analysis
   application). Click one to light up its route on the diagram, with numbered steps and the flow
   direction, on every level you open. It also shows each step's connection details and duration,
-  and the total. The details of a block or line list the streams that pass through it. See
+  and the total. **Streams** in the top bar (or `S`) shows all streams on one screen, exportable
+  as PDF, Excel or CSV. The details of a block or line list the streams that pass through it. See
   "Data streams" in the [YAML guide](docs/YAML-GUIDE.md#11-data-streams).
 - **Checks** lists problems across all files: unknown ids, missing files, connections that
   exist one level up but are not drawn in the drill-down, and data streams whose route is broken.

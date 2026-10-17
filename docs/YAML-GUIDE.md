@@ -454,6 +454,11 @@ streams:
   next block. Blocks with a dashed ring are connected to the last step; other clicks are refused
   with the reason. Clicking a block with subsystems opens it so you can pick the block inside; use
   **Use ... as a whole** in the bar above the diagram to add the block itself instead. **Done** (or Esc) stops.
+- **Streams** (top bar, or the `S` key) shows every stream on one screen: each step with its level and
+  duration, the connection between steps, a bar showing which step takes most of the total time, and
+  the checks for that stream. Click a step to jump to it on the diagram. Export it from there or from
+  **Export ▾**: **PDF** (the overview), **Excel** or **CSV** (one row per step: stream, block, level,
+  connection, protocol, data format, timing, duration, total).
 - In an open stream you can rename it, type a duration per step, remove a step (×), continue
   tracing, or delete it. When two connections join the same blocks, a list under that step picks
   which one the data uses (written as `via:`).
