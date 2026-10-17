@@ -2,10 +2,78 @@
 
 # Burrowly
 
-Architecture diagrams as code: dig from the whole system down into every subsystem.
+**Map how your machines talk. Dig from the whole system down to every wire.**
 
-Draw robotics software/hardware architecture as YAML files, view them as
-clickable diagrams, and keep everything in git.
+Burrowly turns plain YAML files into clickable architecture diagrams for robots, machines and plants.
+Start at the whole system, double-click into any block, and see exactly what every connection carries:
+protocol, data format, timing and owner. Everything lives in git, so a change to the architecture is a
+pull request like any other.
+
+<img src="docs/media/drill-down.gif" alt="Clicking from the whole Molehill Works system into the Digger Molly robot and then into its Drill Head" width="960">
+
+## Why
+
+In most teams the architecture lives in five places that don't agree: a block diagram in Visio, an interface
+list in a spreadsheet, timing in someone's head, and documents that drifted apart months ago. Burrowly puts
+it in one place:
+
+- **One file per diagram level.** Small YAML files that diff and review well. Comments are kept when you edit in the browser.
+- **Interfaces, not just boxes.** Every line has a type, protocol, data format, timing and owner. The interface table shows what is still missing.
+- **Levels that stay in sync.** Checks warn when a connection exists one level up but is not drawn inside the subsystem.
+- **Data streams with a latency budget.** Follow data through blocks on every level and see how long each step takes.
+- **No lock-in.** No database, no account, no npm install. Run it with Node or Docker, or bundle it into one HTML file.
+
+## Try it in a minute
+
+```bash
+git clone https://github.com/burrowly/burrowly.git
+cd burrowly
+node tools/serve.mjs --model examples/molehill-works    # open http://localhost:4321
+```
+
+This opens **Molehill Works**, a made-up demo system three levels deep: a fleet of digging robots builds tunnels
+under a field, run from an underground HQ.
+
+| Level | File | What is in it |
+|---|---|---|
+| 1 | [`system.yaml`](examples/molehill-works/system.yaml) | Burrow HQ, two diggers, a soil conveyor, a charging den, a tunnel sensor mesh and the foreman's tablet |
+| 2 | [`digger-molly.yaml`](examples/molehill-works/digger-molly.yaml) | One robot: main computer, tunnel radio, safety controller, whiskers, claw tracks, battery, spoil hatch |
+| 2 | [`burrow-hq.yaml`](examples/molehill-works/burrow-hq.yaml) | The control server's services: planner, dispatcher, map, radio gateway, telemetry |
+| 3 | [`drill-head.yaml`](examples/molehill-works/drill-head.yaml) | The cutter motor and driver, a microcontroller, snout lidar, torque sensor and soil hardness probe |
+| | [`streams.yaml`](examples/molehill-works/streams.yaml) | Four data streams, such as the foreman's stop button: 107 ms from tablet to cutter motor across all three levels |
+
+One connection is left open on purpose (the weather feed), so you can see how Burrowly shows gaps.
+
+### Trace data end to end
+
+Pick a stream and its route lights up on every level you open, with numbered steps and the flow direction.
+**Streams** in the top bar shows all of them on one screen, exportable to PDF, Excel or CSV.
+
+<img src="docs/media/streams.gif" alt="Tracing the snout scan stream across three levels and opening the streams overview" width="960">
+
+### Edit without writing YAML
+
+Switch on **Edit**, drag a block onto the diagram, drag its **+** onto another block to connect them, and fill
+in the details. Burrowly writes the YAML for you:
+
+<img src="docs/media/edit.gif" alt="Adding a Rain Gauge block and connecting it to the Weather Service in edit mode" width="960">
+
+```diff
++  - id: rain-gauge
++    name: Rain Gauge
++    kind: sensors
++    at: [3, 2.5]
+...
++  - id: rain-gauge-weather
++    from: rain-gauge
++    to: weather
++    direction: both
++    type: network
++    protocol: LoRaWAN
++    timing: every 5 min
+```
+
+## What is in this repository
 
 ```
 burrowly/               <- this repository
@@ -13,11 +81,13 @@ burrowly/               <- this repository
     system.yaml          <- top level (start here)
     robot-cell.yaml      <- drill-down of a block (any block can have one)
     streams.yaml         <- optional: data streams that run through several blocks and levels
+  examples/molehill-works/  <- the demo system shown above
   viewer/index.html      <- the viewer/editor (plain HTML, no build step)
   viewer/streams.js      <- data stream logic, shared by the viewer and tools/check.mjs
   tools/serve.mjs        <- local server: view + edit + save back to model/
   tools/build.mjs        <- bundle everything into one shareable HTML file
   tools/check.mjs        <- run the model checks from the command line (CI, Copilot)
+  site/                  <- the landing page; .github/workflows/pages.yml publishes it with the demo
   .github/               <- GitHub Copilot instructions, skill and prompts
   Dockerfile, compose.yaml  <- run it as a container
 ```
@@ -140,6 +210,7 @@ To share a read-only snapshot (wiki, email, CI artifact):
 
 ```bash
 node tools/build.mjs          # -> dist/burrowly.html (single file)
+node tools/build.mjs --model examples/molehill-works --out dist/demo.html
 ```
 
 `build.mjs` exits with an error if any YAML file does not parse, so you can run it in CI.

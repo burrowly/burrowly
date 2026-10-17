@@ -1,0 +1,206 @@
+# Molehill Works: a made-up demo system for Burrowly.
+# A small fleet of digging robots builds tunnels under a field, run from an underground HQ.
+# Three levels deep: system -> Digger Molly -> Drill Head. Open it with:
+#   node tools/serve.mjs --model examples/molehill-works
+title: Molehill Works
+description: >-
+  Automated tunnel construction. Two digging robots cut tunnels, a conveyor carries the soil
+  to the surface, and Burrow HQ plans the network and keeps everyone in line.
+  This is a fictional demo system made to show what Burrowly can do.
+owner: burrow-architects
+status: example
+links:
+  - { title: Burrowly on GitHub, url: https://github.com/burrowly/burrowly }
+required_connection_fields: [type, protocol, data_format, timing, owner]
+
+kinds:
+  central:   { label: Central system,  badge: C,  color: blue }
+  digger:    { label: Digging robot,   badge: D,  color: green }
+  plant:     { label: Plant equipment, badge: P,  color: purple }
+  sensors:   { label: Sensors,         badge: S,  color: teal }
+  power:     { label: Power,           badge: E,  color: amber }
+  operator:  { label: People & apps,   badge: U,  color: pink }
+  outside:   { label: Outside world,              color: gray }
+
+connection_types:
+  network:   { label: Network / messaging,   color: slate }
+  radio:     { label: Tunnel radio,          color: teal }
+  fieldbus:  { label: Fieldbus,              color: purple }
+  soil:      { label: Soil hand-over,        color: "#8a6a3b", dashed: true, carries_data: false }
+  power:     { label: Power,                 color: red, dashed: true, carries_data: false }
+  undefined: { label: Not yet defined,       color: amber, dashed: true }
+
+blocks:
+  - id: foreman-app
+    name: Foreman App
+    subtitle: tablet
+    kind: operator
+    at: [0, 0]
+    owner: surface-team
+    description: The foreman plans tunnels, watches progress and can stop every digger.
+
+  - id: burrow-hq
+    name: Burrow HQ
+    subtitle: control server
+    kind: central
+    at: [1.5, 0]
+    owner: hq-team
+    detail: burrow-hq.yaml
+    description: Plans the tunnel network, hands out dig orders and keeps the map.
+
+  - id: weather
+    name: Weather Service
+    subtitle: rain warnings
+    kind: outside
+    at: [3, 0]
+    description: Heavy rain floods shallow tunnels, so digging pauses when it is coming.
+
+  - id: digger-molly
+    name: Digger Molly
+    subtitle: M-01
+    kind: digger
+    at: [1, 2]
+    owner: digger-team
+    detail: digger-molly.yaml
+    hardware: 4-claw tracked digger, 48 V, 2 kW cutter
+
+  - id: digger-max
+    name: Digger Max
+    subtitle: M-02
+    kind: digger
+    at: [2, 2]
+    owner: digger-team
+    hardware: same as Digger Molly
+    notes: Same build as Molly. Its drill-down is left out of the demo.
+
+  - id: soil-conveyor
+    name: Soil Conveyor
+    subtitle: to the molehill
+    kind: plant
+    at: [1.5, 3]
+    owner: plant-team
+    description: Carries loose soil from the tunnel face up to the surface heap.
+
+  - id: tunnel-mesh
+    name: Tunnel Sensor Mesh
+    subtitle: 40 nodes
+    kind: sensors
+    at: [3, 1]
+    owner: plant-team
+    description: Moisture, CO2 and ground movement sensors along every finished tunnel.
+
+  - id: charging-den
+    name: Charging Den
+    subtitle: 2 docks
+    kind: power
+    at: [0, 2]
+    owner: plant-team
+
+connections:
+  - id: app-hq
+    from: foreman-app
+    to: burrow-hq
+    direction: both
+    type: network
+    protocol: HTTPS + WebSocket
+    data_format: JSON
+    timing: live updates 1 Hz, commands on event
+    owner: surface-team
+
+  - id: weather-hq
+    from: weather
+    to: burrow-hq
+    type: undefined
+    owner: hq-team
+    notes: Provider not picked yet. Left open on purpose so the interface table shows a gap.
+
+  - id: hq-molly
+    from: burrow-hq
+    to: digger-molly
+    direction: both
+    type: radio
+    protocol: MQTT over tunnel radio
+    data_format: Protobuf (dig orders, state)
+    timing: state 2 Hz, orders on event
+    owner: hq-team
+    label: tunnel radio
+
+  - id: hq-max
+    from: burrow-hq
+    to: digger-max
+    direction: both
+    type: radio
+    protocol: MQTT over tunnel radio
+    data_format: Protobuf (dig orders, state)
+    timing: state 2 Hz, orders on event
+    owner: hq-team
+    label: tunnel radio
+
+  - id: hq-conveyor
+    from: burrow-hq
+    to: soil-conveyor
+    direction: both
+    type: fieldbus
+    protocol: OPC UA
+    data_format: OPC UA companion model
+    timing: 500 ms
+    owner: plant-team
+
+  - id: mesh-hq
+    from: tunnel-mesh
+    to: burrow-hq
+    type: network
+    protocol: MQTT
+    data_format: JSON (SenML)
+    timing: 1 reading / node / 10 s
+    owner: plant-team
+
+  - id: hq-den
+    from: burrow-hq
+    to: charging-den
+    direction: both
+    type: fieldbus
+    protocol: Modbus TCP
+    data_format: holding registers
+    timing: 1 s
+    owner: plant-team
+
+  - id: molly-conveyor
+    from: digger-molly
+    to: soil-conveyor
+    type: soil
+    protocol: spoil hatch onto belt
+    data_format: loose soil
+    timing: about 40 kg / min
+    owner: digger-team
+    label: soil
+
+  - id: max-conveyor
+    from: digger-max
+    to: soil-conveyor
+    type: soil
+    protocol: spoil hatch onto belt
+    data_format: loose soil
+    timing: about 40 kg / min
+    owner: digger-team
+    label: soil
+
+  - id: den-molly
+    from: charging-den
+    to: digger-molly
+    type: power
+    protocol: 48 V DC docking contacts
+    data_format: n/a
+    timing: while docked
+    owner: plant-team
+    label: 48 V
+
+  - id: den-max
+    from: charging-den
+    to: digger-max
+    type: power
+    protocol: 48 V DC docking contacts
+    data_format: n/a
+    timing: while docked
+    owner: plant-team
+    label: 48 V
