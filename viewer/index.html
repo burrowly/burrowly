@@ -1783,7 +1783,9 @@ function addExternalLine(text, id, at) {
     lines.splice(b, 0, "external:", ""); sec = topRange(lines, "external");
   }
   if (/:\s*\[\]\s*$/.test(lines[sec.start])) lines[sec.start] = "external:";
-  lines.splice(sec.end, 0, `  - { id: ${id}, at: [${fmtNum(at[0])}, ${fmtNum(at[1])}] }`);
+  // match the indent of the existing items, or the new line nests inside the last one
+  let ind = 2; for (let i = sec.start + 1; i < sec.end; i++) { const m = lines[i].match(/^(\s*)-\s/); if (m) { ind = m[1].length; break; } }
+  lines.splice(sec.end, 0, `${" ".repeat(ind)}- { id: ${id}, at: [${fmtNum(at[0])}, ${fmtNum(at[1])}] }`);
   return lines.join("\n") + "\n";
 }
 function removeItem(text, section, id) {
