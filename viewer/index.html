@@ -278,13 +278,19 @@ body.ym-open .side { display: none; }
 .tmpline { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; fill: none; pointer-events: none; }
 .drop-ghost { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 4; pointer-events: none; }
 .form { display: grid; gap: 10px; }
-.field { display: grid; gap: 3px; min-width: 0; }
+.field { display: grid; gap: 3px; min-width: 0; align-content: start; }
 .field > span { font-size: 12px; color: var(--muted); font-weight: 500; }
 .field > span .req { color: var(--warn); font-weight: 600; }
 .field input, .field select, .field textarea, .kv input, .kv select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
 .field textarea { min-height: 64px; resize: vertical; }
 .field input:focus, .field select:focus, .field textarea:focus, .kv input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
-.field.need input, .field.need select { border-color: var(--warn); background: var(--warn-bg); }
+.field.need input, .field.need select, .field.need textarea { border-color: var(--warn); background: var(--warn-bg); }
+.kv textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+.kv textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+textarea.grow { display: block; min-height: 0; resize: none; overflow: hidden; line-height: 1.4; overflow-wrap: anywhere; }
+.suggest { position: absolute; z-index: 50; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.15); max-height: 220px; overflow: auto; font-size: 13px; padding: 3px; }
+.suggest > div { padding: 5px 8px; border-radius: 4px; cursor: pointer; overflow-wrap: anywhere; }
+.suggest > div:hover, .suggest > div.on { background: var(--surface-2); }
 .two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
 .sub-h { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; }
 .kv { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) auto; gap: 6px; align-items: center; }
@@ -1232,6 +1238,7 @@ function renderSide(issueList) {
   $("tab-types").hidden = !S.editing;
   for (const t of ["details", "types", "yaml", "streams", "issues"]) $("tab-" + t).setAttribute("aria-selected", String(S.tab === t));
   if (S.tab === "types") renderTypes(); else if (S.tab === "yaml") renderEditor(); else if (S.tab === "issues") renderIssues(issueList); else if (S.tab === "streams") renderStreams(issueList); else if (S.editing) renderForm(); else renderDetails();
+  growAll($("tabpanel"));
 }
 function renderCrumbs() {
   const chain = [S.current, ...ancestors(S.current)].reverse();
@@ -1565,11 +1572,11 @@ function fld(label, key, val, o = {}) {
     const opts = o.options.some(([v]) => String(v) === String(val ?? "")) || isEmpty(val) ? o.options : [...o.options, [val, val]];
     input = `<select data-f="${key}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(val ?? "") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   } else if (o.area) input = `<textarea data-f="${key}" rows="3" placeholder="${esc(o.ph || "")}">${esc(isEmpty(val) ? "" : fmtVal(val))}</textarea>`;
-  else input = `<input data-f="${key}" value="${esc(isEmpty(val) ? "" : fmtVal(val))}" ${o.list ? `list="${o.list}"` : ""} placeholder="${esc(o.ph || "")}" ${Array.isArray(val) ? 'data-arr="1"' : ""} autocomplete="off">`;
+  else input = `<textarea class="grow" rows="1" data-f="${key}" ${o.list ? `data-list="${o.list}"` : ""} placeholder="${esc(o.ph || "")}" ${Array.isArray(val) ? 'data-arr="1"' : ""} autocomplete="off">${esc(isEmpty(val) ? "" : fmtVal(val))}</textarea>`;
   return `<label class="field ${miss ? "need" : ""}"><span>${esc(label)}${o.req ? ' <span class="req" title="Required">•</span>' : ""}</span>${input}</label>`;
 }
-const linkRow = (l = {}) => `<div class="kv" data-link><input data-lk="title" value="${esc(l.title || "")}" placeholder="Title"><input data-lk="url" value="${esc(l.url || "")}" placeholder="https://…" inputmode="url"><button class="x" type="button" data-act="rm-link" aria-label="Remove link">×</button></div>`;
-const attrRow = (k = "", v = "") => `<div class="kv" data-attr data-orig="${esc(k)}" data-arr="${Array.isArray(v) ? 1 : ""}"><input data-ak="k" value="${esc(k)}" placeholder="name, e.g. qos"><input data-ak="v" value="${esc(isEmpty(v) ? "" : fmtVal(v))}" placeholder="value"><button class="x" type="button" data-act="rm-attr" aria-label="Remove attribute">×</button></div>`;
+const linkRow = (l = {}) => `<div class="kv" data-link><textarea class="grow" rows="1" data-lk="title" placeholder="Title">${esc(l.title || "")}</textarea><textarea class="grow" rows="1" data-lk="url" placeholder="https://…" inputmode="url">${esc(l.url || "")}</textarea><button class="x" type="button" data-act="rm-link" aria-label="Remove link">×</button></div>`;
+const attrRow = (k = "", v = "") => `<div class="kv" data-attr data-orig="${esc(k)}" data-arr="${Array.isArray(v) ? 1 : ""}"><input data-ak="k" value="${esc(k)}" placeholder="name, e.g. qos"><textarea class="grow" rows="1" data-ak="v" placeholder="value">${esc(isEmpty(v) ? "" : fmtVal(v))}</textarea><button class="x" type="button" data-act="rm-attr" aria-label="Remove attribute">×</button></div>`;
 function linksEditor(links) {
   return `<div class="sub-h">Documentation links <button class="linkbtn" type="button" data-act="add-link">+ Add link</button></div><div class="form" style="gap:6px" data-links>${(links || []).map(l => linkRow(l)).join("")}</div>`;
 }
@@ -2103,7 +2110,7 @@ document.addEventListener("click", (e) => {
     }
   }
   if (act === "unlink-detail") { mutate(tx => setItemKey(tx, "blocks", t.dataset.id, "detail", undefined), { full: true }); }
-  if (act === "add-link") { const box = form.querySelector("[data-links]"); box.insertAdjacentHTML("beforeend", linkRow()); box.lastElementChild.querySelector("input").focus(); }
+  if (act === "add-link") { const box = form.querySelector("[data-links]"); box.insertAdjacentHTML("beforeend", linkRow()); box.lastElementChild.querySelector("textarea").focus(); }
   if (act === "rm-link") { t.closest("[data-link]").remove(); writeLinks(form); }
   if (act === "add-attr") { const box = form.querySelector("[data-attrs]"); box.insertAdjacentHTML("beforeend", attrRow()); box.lastElementChild.querySelector("input").focus(); }
   if (act === "rm-attr") {
@@ -2163,6 +2170,46 @@ document.addEventListener("click", (e) => {
   }
 });
 
+/* one-line fields are textareas so long values wrap: grow to fit, keep the value on one line,
+   and offer suggestions (the job a datalist did on the old inputs) */
+function grow(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + el.offsetHeight - el.clientHeight + "px"; }
+function growAll(root) { root?.querySelectorAll("textarea.grow").forEach(grow); }
+let growW = 0;
+new ResizeObserver(([e]) => { if (e.contentRect.width !== growW) { growW = e.contentRect.width; growAll($("tabpanel")); } }).observe($("tabpanel"));
+let sug = null;
+function hideSuggest() { sug?.box.remove(); sug = null; }
+function suggest(t) {
+  hideSuggest();
+  const dl = t.dataset.list && document.getElementById(t.dataset.list); if (!dl || document.activeElement !== t) return;
+  const q = t.value.trim().toLowerCase();
+  const vals = [...dl.options].map(o => o.value).filter(v => v !== t.value && v.toLowerCase().includes(q)).slice(0, 8);
+  if (!vals.length) return;
+  const box = document.createElement("div"), r = t.getBoundingClientRect();
+  box.className = "suggest"; box.setAttribute("role", "listbox");
+  box.innerHTML = vals.map(v => `<div role="option" data-sv="${esc(v)}">${esc(v)}</div>`).join("");
+  Object.assign(box.style, { left: r.left + scrollX + "px", top: r.bottom + scrollY + 2 + "px", width: r.width + "px" });
+  document.body.appendChild(box); sug = { box, t, i: -1 };
+}
+function pickSuggest(v) { const t = sug.t; t.value = v; hideSuggest(); grow(t); t.dispatchEvent(new Event("change", { bubbles: true })); }
+document.addEventListener("input", (e) => {
+  const t = e.target; if (!t.matches?.("textarea.grow")) return;
+  if (/[\r\n]/.test(t.value)) { const p = t.value.slice(0, t.selectionStart).replace(/[\r\n]+/g, " ").length; t.value = t.value.replace(/[\r\n]+/g, " "); t.setSelectionRange(p, p); }
+  grow(t); suggest(t);
+});
+document.addEventListener("keydown", (e) => {
+  const t = e.target; if (!t.matches?.("textarea.grow")) return;
+  if (sug?.t === t && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    e.preventDefault(); const items = [...sug.box.children];
+    sug.i = (sug.i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items.forEach((c, i) => c.classList.toggle("on", i === sug.i)); items[sug.i].scrollIntoView({ block: "nearest" }); return;
+  }
+  if (e.key === "Escape" && sug) { hideSuggest(); return; }
+  if (e.key === "Enter") { e.preventDefault(); if (sug?.t === t && sug.i >= 0) pickSuggest(sug.box.children[sug.i].dataset.sv); else t.blur(); }
+});
+document.addEventListener("focusin", (e) => { if (e.target.matches?.("textarea[data-list]")) suggest(e.target); });
+document.addEventListener("focusout", (e) => { if (sug && e.target === sug.t) hideSuggest(); });
+document.addEventListener("mousedown", (e) => { const o = e.target.closest?.(".suggest [data-sv]"); if (o) { e.preventDefault(); pickSuggest(o.dataset.sv); } });
+document.addEventListener("scroll", (e) => { if (sug && !sug.box.contains(e.target)) hideSuggest(); }, true);
 document.addEventListener("focusin", (e) => { if (e.target.id === "yaml" || e.target.id === "yaml-big") { const f = S.files[e.target.id === "yaml-big" ? ymFile() : S.current]; (f.undo ||= []).push(f.text); } });
 document.addEventListener("input", (e) => {
   if (e.target.id !== "yaml" && e.target.id !== "yaml-big") return;
