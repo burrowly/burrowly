@@ -1721,6 +1721,17 @@ function itemRange(lines, section, id) {
     while (e > i + 1 && isFiller(lines[e - 1])) e--;
     return { start: i, end: e, ind, keyInd: ind + 2 };
   }
+  // a one-line item like "- { id: x, from: a, to: b }": rewrite it as a block item so its keys can be edited
+  const fl = new RegExp(`^(\\s*)-\\s*(\\{\\s*id:\\s*["']?${reEsc(id)}["']?\\s*[,}].*)$`);
+  for (let i = sec.start + 1; i < sec.end; i++) {
+    const m = lines[i].match(fl); if (!m) continue;
+    let obj; try { obj = jsyaml.load(m[2]); } catch { return null; }
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+    const ind = m[1].length, out = [" ".repeat(ind) + "- id: " + jsyaml.dump(obj.id).trim()];
+    for (const [k, v] of Object.entries(obj)) if (k !== "id") out.push(...dumpKey(k, v, ind + 2));
+    lines.splice(i, 1, ...out);
+    return { start: i, end: i + out.length, ind, keyInd: ind + 2 };
+  }
   return null;
 }
 function keyRange(lines, from, to, ind, key) {
